@@ -1,3 +1,12 @@
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   LanguageConfig,
   NodePosition,
@@ -36,7 +46,7 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language';
-import { Compartment } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import {
   EditorView,
   ViewUpdate,
@@ -45,7 +55,17 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { vim } from '@replit/codemirror-vim';
+import { Settings2 } from 'lucide-react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Language, Parser } from 'web-tree-sitter';
 
 import { TreeNode } from './components/tree-node';
@@ -90,6 +110,146 @@ const languageConfigs: Record<SupportedLanguage, LanguageConfig> = {
   },
 };
 
+interface EditorSettings {
+  fontSize: number;
+  lineNumbers: boolean;
+  lineWrapping: boolean;
+  tabSize: number;
+  theme: 'light' | 'dark' | 'system';
+  vimMode: boolean;
+}
+
+const defaultEditorSettings: EditorSettings = {
+  fontSize: 14,
+  lineNumbers: true,
+  lineWrapping: false,
+  tabSize: 2,
+  theme: 'system',
+  vimMode: false,
+};
+
+const EditorSettingsModal = ({
+  setSettingsOpen,
+  settings,
+  settingsOpen,
+  updateSetting,
+}: {
+  setSettingsOpen: Dispatch<SetStateAction<boolean>>;
+  settings: any;
+  settingsOpen: boolean;
+  updateSetting: any;
+}) => (
+  <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+    <DialogContent className='sm:max-w-[425px]'>
+      <DialogHeader>
+        <DialogTitle>Settings</DialogTitle>
+        <DialogDescription>
+          Customize your editor experience with these settings.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className='grid gap-4 py-4'>
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='vim-mode' className='text-sm font-medium'>
+            Vim Mode
+          </Label>
+          <Switch
+            id='vim-mode'
+            checked={settings.vimMode}
+            onCheckedChange={(checked) => updateSetting('vimMode', checked)}
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='line-wrapping' className='text-sm font-medium'>
+            Line Wrapping
+          </Label>
+          <Switch
+            id='line-wrapping'
+            checked={settings.lineWrapping}
+            onCheckedChange={(checked) =>
+              updateSetting('lineWrapping', checked)
+            }
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='line-numbers' className='text-sm font-medium'>
+            Line Numbers
+          </Label>
+          <Switch
+            id='line-numbers'
+            checked={settings.lineNumbers}
+            onCheckedChange={(checked) => updateSetting('lineNumbers', checked)}
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='tab-size' className='text-sm font-medium'>
+            Tab Size
+          </Label>
+          <Select
+            value={settings.tabSize.toString()}
+            onValueChange={(value) => updateSetting('tabSize', parseInt(value))}
+          >
+            <SelectTrigger id='tab-size' className='w-28'>
+              <SelectValue placeholder='Tab Size' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='2'>2 spaces</SelectItem>
+              <SelectItem value='4'>4 spaces</SelectItem>
+              <SelectItem value='8'>8 spaces</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='theme' className='text-sm font-medium'>
+            Theme
+          </Label>
+          <Select
+            value={settings.theme}
+            onValueChange={(value) =>
+              updateSetting('theme', value as 'light' | 'dark' | 'system')
+            }
+          >
+            <SelectTrigger id='theme' className='w-28'>
+              <SelectValue placeholder='Theme' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='light'>Light</SelectItem>
+              <SelectItem value='dark'>Dark</SelectItem>
+              <SelectItem value='system'>System</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <Label htmlFor='font-size' className='text-sm font-medium'>
+            Font Size
+          </Label>
+          <Select
+            value={settings.fontSize.toString()}
+            onValueChange={(value) =>
+              updateSetting('fontSize', parseInt(value))
+            }
+          >
+            <SelectTrigger id='font-size' className='w-28'>
+              <SelectValue placeholder='Font Size' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='12'>12px</SelectItem>
+              <SelectItem value='14'>14px</SelectItem>
+              <SelectItem value='16'>16px</SelectItem>
+              <SelectItem value='18'>18px</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
+
 const App = () => {
   const [parser, setParser] = useState<Parser | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
@@ -116,9 +276,18 @@ const App = () => {
     new Set()
   );
 
+  // Settings state
+  const [settings, setSettings] = useState<EditorSettings>(defaultEditorSettings);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
+  const vimCompartment = useRef(new Compartment());
+  const lineWrapCompartment = useRef(new Compartment());
+  const lineNumbersCompartment = useRef(new Compartment());
+  const fontSizeCompartment = useRef(new Compartment());
+  const tabSizeCompartment = useRef(new Compartment());
 
   useEffect(() => {
     const setup = async () => {
@@ -143,13 +312,40 @@ const App = () => {
     };
   }, []);
 
+  // Apply editor settings
+  useEffect(() => {
+    if (!editorViewRef.current) return;
+
+    editorViewRef.current.dispatch({
+      effects: [
+        vimCompartment.current.reconfigure(settings.vimMode ? vim() : []),
+        lineWrapCompartment.current.reconfigure(
+          settings.lineWrapping ? EditorView.lineWrapping : []
+        ),
+        lineNumbersCompartment.current.reconfigure(
+          settings.lineNumbers ? lineNumbers() : []
+        ),
+        fontSizeCompartment.current.reconfigure(
+          EditorView.theme({
+            '&': {
+              fontSize: `${settings.fontSize}px`,
+            },
+          })
+        ),
+        tabSizeCompartment.current.reconfigure(
+          EditorState.tabSize.of(settings.tabSize)
+        ),
+      ],
+    });
+  }, [settings]);
+
   useEffect(() => {
     if (!editorRef.current) return;
 
     const theme = EditorView.theme({
       '&': {
         height: '100%',
-        fontSize: '14px',
+        fontSize: `${settings.fontSize}px`,
         display: 'flex',
         flexDirection: 'column',
       },
@@ -178,6 +374,15 @@ const App = () => {
       '.cm-activeLine': {
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
       },
+      // VIM cursor styles
+      '.cm-fat-cursor': {
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+        borderLeft: 'none',
+        width: '0.6em',
+      },
+      '.cm-cursor-secondary': {
+        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+      },
     });
 
     const onUpdate = (update: ViewUpdate) => {
@@ -200,7 +405,21 @@ const App = () => {
     };
 
     const editorExtensions = [
-      lineNumbers(),
+      vimCompartment.current.of(settings.vimMode ? vim() : []),
+      lineNumbersCompartment.current.of(
+        settings.lineNumbers ? lineNumbers() : []
+      ),
+      lineWrapCompartment.current.of(
+        settings.lineWrapping ? EditorView.lineWrapping : []
+      ),
+      fontSizeCompartment.current.of(
+        EditorView.theme({
+          '&': {
+            fontSize: `${settings.fontSize}px`,
+          },
+        })
+      ),
+      tabSizeCompartment.current.of(EditorState.tabSize.of(settings.tabSize)),
       highlightActiveLine(),
       highlightActiveLineGutter(),
       history(),
@@ -354,6 +573,16 @@ const App = () => {
     [formattedTree, expandedNodes]
   );
 
+  const updateSetting = <K extends keyof EditorSettings>(
+    key: K,
+    value: EditorSettings[K]
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
   if (loading && !parser) {
     return (
       <div className='flex h-screen items-center justify-center'>
@@ -381,24 +610,41 @@ const App = () => {
         >
           <ResizablePanel defaultSize={50} minSize={30}>
             <div className='flex h-full min-h-0 flex-col overflow-hidden'>
-              <div className='flex items-center justify-end border-b bg-gray-50 px-2 py-1'>
-                <Select
-                  value={currentLanguage}
-                  onValueChange={(value) =>
-                    handleLanguageChange(value as SupportedLanguage)
-                  }
+              <div className='flex items-center justify-between border-b bg-gray-50 px-2 py-1'>
+                <div className='flex items-center'>
+                  <Select
+                    value={currentLanguage}
+                    onValueChange={(value) =>
+                      handleLanguageChange(value as SupportedLanguage)
+                    }
+                  >
+                    <SelectTrigger className='h-7 w-36 bg-white text-sm'>
+                      <SelectValue placeholder='Select language' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(languageConfigs).map((config) => (
+                        <SelectItem key={config.name} value={config.name}>
+                          {config.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {settings.vimMode && (
+                    <span className='ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs'>
+                      VIM
+                    </span>
+                  )}
+                </div>
+
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => setSettingsOpen(true)}
+                  title='Settings'
+                  className='h-7 w-7'
                 >
-                  <SelectTrigger className='h-7 w-36 bg-white text-sm'>
-                    <SelectValue placeholder='Select language' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(languageConfigs).map((config) => (
-                      <SelectItem key={config.name} value={config.name}>
-                        {config.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Settings2 className='h-4 w-4' />
+                </Button>
               </div>
               <div ref={editorRef} className='w-full flex-1' />
             </div>
@@ -434,6 +680,13 @@ const App = () => {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+
+      <EditorSettingsModal
+        settingsOpen={settingsOpen}
+        setSettingsOpen={setSettingsOpen}
+        updateSetting={updateSetting}
+        settings={settings}
+      />
     </div>
   );
 };
