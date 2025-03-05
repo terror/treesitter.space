@@ -598,7 +598,7 @@ const App = () => {
   return (
     <div className='flex h-screen max-w-full flex-col'>
       <div className='flex items-center justify-between px-4 py-4'>
-        <a href='/' className='font-semibold'>
+        <a href='/treesitter.space' className='font-semibold'>
           treesitter.space
         </a>
       </div>
