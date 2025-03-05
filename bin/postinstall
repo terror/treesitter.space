@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+cp node_modules/web-tree-sitter/tree-sitter.wasm public
+cp node_modules/tree-sitter-javascript/tree-sitter-javascript.wasm public
