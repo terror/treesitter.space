@@ -8,6 +8,7 @@ import { json } from '@codemirror/lang-json';
 import { php } from '@codemirror/lang-php';
 import { python } from '@codemirror/lang-python';
 import { rust } from '@codemirror/lang-rust';
+
 import type { LanguageConfig, SupportedLanguage } from './types';
 
 export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
@@ -293,7 +294,7 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
       '      --dark-color: #2f3a4a;\n' +
       '    }\n' +
       '    body {\n' +
-      '      font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif;\n' +
+      "      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n" +
       '      line-height: 1.6;\n' +
       '      color: var(--dark-color);\n' +
       '      background-color: var(--light-color);\n' +
