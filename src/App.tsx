@@ -10,13 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Position,
-  SupportedLanguage,
-  SyntaxNode,
-  TreeNodeInfo,
-} from '@/lib/types';
-import { getVisibleNodes, parseCode, processTree } from '@/lib/utils';
+import { Language, Position, SyntaxNode, TreeNodeInfo } from '@/lib/types';
+import { getVisibleNodes, parse, processTree } from '@/lib/utils';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import {
   bracketMatching,
@@ -36,7 +31,7 @@ import {
 import { vim } from '@replit/codemirror-vim';
 import { TentTree } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Language, Parser } from 'web-tree-sitter';
+import { Parser, Language as TSLanguage } from 'web-tree-sitter';
 
 import { EditorSettingsDialog } from './components/editor-settings-dialog';
 import { TreeNode } from './components/tree-node';
@@ -54,9 +49,7 @@ const App = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [parser, setParser] = useState<Parser | undefined>(undefined);
 
-  const [languages, setLanguages] = useState<Map<SupportedLanguage, Language>>(
-    new Map()
-  );
+  const [languages, sets] = useState<Map<Language, TSLanguage>>(new Map());
 
   const [hoveredTreeNode, setHoveredTreeNode] = useState<SyntaxNode | null>(
     null
@@ -123,7 +116,7 @@ const App = () => {
 
         if (!language) return;
 
-        const newTree = parseCode(parser, language, newCode);
+        const newTree = parse({ parser, language, code: newCode });
 
         if (newTree) {
           const { formattedTree, nodePositionMap, allNodes } = processTree(
@@ -242,25 +235,26 @@ const App = () => {
   }, [parser, editorSettings.language, languages, editorSettings]);
 
   useEffect(() => {
-    const loadCurrentLanguage = async (langName: SupportedLanguage) => {
-      if (!parser || languages.has(langName)) return;
+    const loadLanguage = async (languageName: Language) => {
+      if (!parser || languages.has(languageName)) return;
 
       try {
         setLoading(true);
 
-        const config = languageConfig[langName];
+        const config = languageConfig[languageName];
 
-        const language = await Language.load(config.wasmPath);
+        const language = await TSLanguage.load(config.wasmPath);
 
-        setLanguages((prev) => {
+        sets((prev) => {
           const updated = new Map(prev);
-          updated.set(langName, language);
+          updated.set(languageName, language);
           return updated;
         });
 
-        if (langName === editorSettings.language && editorViewRef.current) {
+        if (languageName === editorSettings.language && editorViewRef.current) {
           const code = editorViewRef.current.state.doc.toString();
-          const newTree = parseCode(parser, language, code);
+
+          const newTree = parse({ parser, language, code });
 
           if (newTree) {
             const { formattedTree, nodePositionMap, allNodes } = processTree(
@@ -275,37 +269,39 @@ const App = () => {
         }
       } catch (err) {
         setError(
-          `Failed to load language ${langName}: ${err instanceof Error ? err.message : String(err)}`
+          `Failed to load language ${languageName}: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
         setLoading(false);
       }
     };
 
-    if (parser && !languages.has(editorSettings.language)) {
-      loadCurrentLanguage(editorSettings.language);
-    }
+    loadLanguage(editorSettings.language);
   }, [parser, editorSettings.language, languages]);
 
-  const handleLanguageChange = (lang: SupportedLanguage) => {
+  const handleChange = (newLanguage: Language) => {
     if (editorViewRef.current) {
       editorViewRef.current.dispatch({
         changes: {
           from: 0,
           to: editorViewRef.current.state.doc.length,
-          insert: languageConfig[lang].sampleCode,
+          insert: languageConfig[newLanguage].sampleCode,
         },
         effects: new Compartment().reconfigure(
-          languageConfig[lang].cmExtension
+          languageConfig[newLanguage].cmExtension
         ),
       });
 
-      updateEditorSettings({ language: lang });
+      updateEditorSettings({ language: newLanguage });
 
-      if (parser && languages.has(lang)) {
+      if (parser && languages.has(newLanguage)) {
         const code = editorViewRef.current.state.doc.toString();
-        const language = languages.get(lang)!;
-        const newTree = parseCode(parser, language, code);
+
+        const language = languages.get(newLanguage);
+
+        if (!language) return;
+
+        const newTree = parse({ parser, language, code });
 
         if (newTree) {
           const { formattedTree, nodePositionMap, allNodes } = processTree(
@@ -397,9 +393,7 @@ const App = () => {
                 <div className='flex items-center'>
                   <Select
                     value={editorSettings.language}
-                    onValueChange={(value) =>
-                      handleLanguageChange(value as SupportedLanguage)
-                    }
+                    onValueChange={(value) => handleChange(value as Language)}
                   >
                     <SelectTrigger className='h-7 w-36 bg-white text-sm'>
                       <SelectValue placeholder='Select language' />

@@ -2,6 +2,9 @@ set dotenv-load
 
 export EDITOR := 'nvim'
 
+alias f := fmt
+alias t := test
+
 default:
   just --list
 
@@ -20,3 +23,6 @@ deploy:
 [group: 'local']
 dev:
   bun run dev
+
+test:
+  bun test

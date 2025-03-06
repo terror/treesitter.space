@@ -1,11 +1,11 @@
 import { usePersistedState } from '@/hooks/use-persisted-state';
-import { SupportedLanguage } from '@/lib/types';
+import { Language } from '@/lib/types';
 import { ReactNode, createContext, useContext } from 'react';
 
 export interface EditorSettings {
   fontSize: number;
   keybindings: 'default' | 'vim';
-  language: SupportedLanguage;
+  language: Language;
   lineNumbers: boolean;
   lineWrapping: boolean;
   tabSize: number;

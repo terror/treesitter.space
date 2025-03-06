@@ -9,7 +9,7 @@ export interface SyntaxNode {
   children: SyntaxNode[];
 }
 
-export type SupportedLanguage =
+export type Language =
   | 'cpp'
   | 'css'
   | 'go'
@@ -22,7 +22,7 @@ export type SupportedLanguage =
   | 'rust';
 
 export interface LanguageConfig {
-  name: SupportedLanguage;
+  name: Language;
   displayName: string;
   wasmPath: string;
   sampleCode: string;
