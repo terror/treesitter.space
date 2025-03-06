@@ -34,6 +34,7 @@ import {
   lineNumbers,
 } from '@codemirror/view';
 import { vim } from '@replit/codemirror-vim';
+import { TentTree } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Language, Parser } from 'web-tree-sitter';
 
@@ -420,7 +421,8 @@ const App = () => {
 
   return (
     <div className='flex h-screen max-w-full flex-col'>
-      <div className='flex items-center justify-between px-4 py-4'>
+      <div className='flex items-center gap-x-2 px-4 py-4'>
+        <TentTree className='h-4 w-4' />
         <a href='/treesitter.space/' className='font-semibold'>
           treesitter.space
         </a>
