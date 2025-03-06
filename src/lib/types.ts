@@ -26,7 +26,7 @@ export interface TreeNodeInfo {
   type: string;
 }
 
-export interface NodePosition {
-  from: number;
-  to: number;
-}
+export type Position = {
+  start: number;
+  end: number;
+};
