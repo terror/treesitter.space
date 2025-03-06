@@ -34,7 +34,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
       onMouseLeave={() => setHoveredTreeNode(null)}
       onClick={() => hasChildren && toggleNodeExpansion(item.node)}
     >
-      <span className='mr-2 flex w-4 justify-center'>
+      <span className='mr-1 flex w-4 justify-center'>
         {hasChildren ? (
           isExpanded ? (
             <ChevronDown size={14} />
