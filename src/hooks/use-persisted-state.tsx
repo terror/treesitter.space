@@ -27,10 +27,10 @@ export function usePersistedState<T extends object>(
 
   useEffect(() => {
     try {
-      const serializedValue = options?.serialize
-        ? options.serialize(state)
-        : JSON.stringify(state);
-      localStorage.setItem(key, serializedValue);
+      localStorage.setItem(
+        key,
+        options?.serialize ? options.serialize(state) : JSON.stringify(state)
+      );
     } catch (error) {
       console.warn(`Error saving ${key} to localStorage:`, error);
     }

@@ -38,11 +38,7 @@ import { TentTree } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Language, Parser } from 'web-tree-sitter';
 
-import {
-  EditorSettings,
-  EditorSettingsDialog,
-  defaultEditorSettings,
-} from './components/editor-settings-dialog';
+import { EditorSettingsDialog } from './components/editor-settings-dialog';
 import { TreeNode } from './components/tree-node';
 import {
   addHighlightEffect,
@@ -50,12 +46,13 @@ import {
   removeHighlightEffect,
 } from './lib/cm-highlight-extension';
 import { languageConfig } from './lib/language-config';
+import { useEditorSettings } from './providers/editor-settings-provider';
 
 const App = () => {
-  const [parser, setParser] = useState<Parser | undefined>(undefined);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [formattedTree, setFormattedTree] = useState<TreeNodeInfo[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [parser, setParser] = useState<Parser | undefined>(undefined);
 
   const [currentLanguage, setCurrentLanguage] =
     useState<SupportedLanguage>('javascript');
@@ -76,21 +73,10 @@ const App = () => {
     new Set()
   );
 
-  const [editorSettings, setEditorSettings] = useState<EditorSettings>(
-    defaultEditorSettings
-  );
-
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
 
-  const compartments = {
-    language: useRef(new Compartment()),
-    vim: useRef(new Compartment()),
-    lineWrap: useRef(new Compartment()),
-    lineNumbers: useRef(new Compartment()),
-    fontSize: useRef(new Compartment()),
-    tabSize: useRef(new Compartment()),
-  };
+  const { settings: editorSettings } = useEditorSettings();
 
   useEffect(() => {
     const setup = async () => {
@@ -126,81 +112,8 @@ const App = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!editorViewRef.current) return;
-
-    editorViewRef.current.dispatch({
-      effects: [
-        compartments.vim.current.reconfigure(
-          editorSettings.keybindings === 'vim' ? vim() : []
-        ),
-        compartments.lineWrap.current.reconfigure(
-          editorSettings.lineWrapping ? EditorView.lineWrapping : []
-        ),
-        compartments.lineNumbers.current.reconfigure(
-          editorSettings.lineNumbers ? lineNumbers() : []
-        ),
-        compartments.fontSize.current.reconfigure(
-          EditorView.theme({
-            '&': {
-              fontSize: `${editorSettings.fontSize}px`,
-            },
-          })
-        ),
-        compartments.tabSize.current.reconfigure(
-          EditorState.tabSize.of(editorSettings.tabSize)
-        ),
-      ],
-    });
-  }, [editorSettings]);
-
-  useEffect(() => {
-    if (!editorRef.current) return;
-
-    const theme = EditorView.theme({
-      '&': {
-        height: '100%',
-        fontSize: `${editorSettings.fontSize}px`,
-        display: 'flex',
-        flexDirection: 'column',
-      },
-      '&.cm-editor': {
-        height: '100%', // Ensure editor takes full height
-      },
-      '.cm-scroller': {
-        overflow: 'auto',
-        flex: '1 1 auto', // Allow scroller to grow
-        fontFamily:
-          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-      },
-      '.cm-content': {
-        padding: '10px 0',
-      },
-      '.cm-line': {
-        padding: '0 10px',
-      },
-      '.cm-gutters': {
-        backgroundColor: 'transparent',
-        borderRight: 'none',
-        paddingRight: '8px',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      },
-      '.cm-activeLine': {
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      },
-      '.cm-fat-cursor': {
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-        borderLeft: 'none',
-        width: '0.6em',
-      },
-      '.cm-cursor-secondary': {
-        backgroundColor: 'rgba(59, 130, 246, 0.3)',
-      },
-    });
-
-    const onUpdate = (update: ViewUpdate) => {
+  const onEditorUpdate = useCallback(
+    (update: ViewUpdate) => {
       if (update.docChanged && parser && languages.has(currentLanguage)) {
         const newCode = update.state.doc.toString();
 
@@ -221,50 +134,101 @@ const App = () => {
           setExpandedNodes(allNodes);
         }
       }
-    };
+    },
+    [
+      parser,
+      languages,
+      currentLanguage,
+      setFormattedTree,
+      setNodeToPositionMap,
+      setExpandedNodes,
+    ]
+  );
 
-    const editorExtensions: Extension[] = [
-      compartments.vim.current.of(
-        editorSettings.keybindings === 'vim' ? vim() : []
-      ),
-      compartments.lineNumbers.current.of(
-        editorSettings.lineNumbers ? lineNumbers() : []
-      ),
-      compartments.lineWrap.current.of(
-        editorSettings.lineWrapping ? EditorView.lineWrapping : []
-      ),
-      compartments.fontSize.current.of(
-        EditorView.theme({
-          '&': {
-            fontSize: `${editorSettings.fontSize}px`,
-          },
-        })
-      ),
-      compartments.tabSize.current.of(
-        EditorState.tabSize.of(editorSettings.tabSize)
-      ),
+  const createEditorTheme = useCallback(
+    () =>
+      EditorView.theme({
+        '&': {
+          height: '100%',
+          fontSize: `${editorSettings.fontSize}px`,
+          display: 'flex',
+          flexDirection: 'column',
+        },
+        '&.cm-editor': {
+          height: '100%',
+        },
+        '.cm-scroller': {
+          overflow: 'auto',
+          flex: '1 1 auto',
+          fontFamily:
+            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        },
+        '.cm-content': {
+          padding: '10px 0',
+        },
+        '.cm-line': {
+          padding: '0 10px',
+        },
+        '.cm-gutters': {
+          backgroundColor: 'transparent',
+          borderRight: 'none',
+          paddingRight: '8px',
+        },
+        '.cm-activeLineGutter': {
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        },
+        '.cm-activeLine': {
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        },
+        '.cm-fat-cursor': {
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          borderLeft: 'none',
+          width: '0.6em',
+        },
+        '.cm-cursor-secondary': {
+          backgroundColor: 'rgba(59, 130, 246, 0.3)',
+        },
+      }),
+    [editorSettings]
+  );
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const extensions: Extension[] = [
+      EditorState.tabSize.of(editorSettings.tabSize),
+      EditorView.updateListener.of(onEditorUpdate),
+      bracketMatching(),
+      createEditorTheme(),
       highlightActiveLine(),
       highlightActiveLineGutter(),
+      highlightPlugin,
       history(),
       indentOnInput(),
-      bracketMatching(),
-      syntaxHighlighting(defaultHighlightStyle),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      compartments.language.current.of(
-        languageConfig[currentLanguage].cmExtension
-      ),
-      highlightPlugin,
-      EditorView.updateListener.of(onUpdate),
-      theme,
+      languageConfig[currentLanguage].cmExtension,
+      syntaxHighlighting(defaultHighlightStyle),
     ];
 
-    const startState = EditorState.create({
+    if (editorSettings.keybindings === 'vim') {
+      extensions.push(vim());
+    }
+
+    if (editorSettings.lineNumbers) {
+      extensions.push(lineNumbers());
+    }
+
+    if (editorSettings.lineWrapping) {
+      extensions.push(EditorView.lineWrapping);
+    }
+
+    const state = EditorState.create({
       doc: languageConfig[currentLanguage].sampleCode,
-      extensions: editorExtensions,
+      extensions: extensions,
     });
 
     const view = new EditorView({
-      state: startState,
+      state: state,
       parent: editorRef.current,
     });
 
@@ -273,7 +237,7 @@ const App = () => {
     return () => {
       view.destroy();
     };
-  }, [parser, currentLanguage, languages]);
+  }, [parser, currentLanguage, languages, editorSettings]);
 
   useEffect(() => {
     const loadCurrentLanguage = async (langName: SupportedLanguage) => {
@@ -329,7 +293,7 @@ const App = () => {
           to: editorViewRef.current.state.doc.length,
           insert: languageConfig[lang].sampleCode,
         },
-        effects: compartments.language.current.reconfigure(
+        effects: new Compartment().reconfigure(
           languageConfig[lang].cmExtension
         ),
       });
@@ -399,16 +363,6 @@ const App = () => {
     [formattedTree, expandedNodes]
   );
 
-  const updateEditorSetting = <K extends keyof EditorSettings>(
-    key: K,
-    value: EditorSettings[K]
-  ) => {
-    setEditorSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
   if (loading && !parser) {
     return (
       <div className='flex h-screen items-center justify-center'>
@@ -463,10 +417,7 @@ const App = () => {
                   )}
                 </div>
 
-                <EditorSettingsDialog
-                  settings={editorSettings}
-                  updateSetting={updateEditorSetting}
-                />
+                <EditorSettingsDialog />
               </div>
               <div ref={editorRef} className='w-full flex-1 overflow-hidden' />
             </div>

@@ -15,39 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useEditorSettings } from '@/providers/editor-settings-provider';
 import { Settings } from 'lucide-react';
 import { useState } from 'react';
 
-export interface EditorSettings {
-  fontSize: number;
-  lineNumbers: boolean;
-  lineWrapping: boolean;
-  tabSize: number;
-  theme: 'light' | 'dark' | 'system';
-  keybindings: 'default' | 'vim';
-}
+export const EditorSettingsDialog = () => {
+  const { settings, updateSettings } = useEditorSettings();
 
-export const defaultEditorSettings: EditorSettings = {
-  fontSize: 14,
-  lineNumbers: true,
-  lineWrapping: false,
-  tabSize: 2,
-  theme: 'system',
-  keybindings: 'default',
-};
-
-interface EditorSettingsDialogProps {
-  settings: EditorSettings;
-  updateSetting: <K extends keyof EditorSettings>(
-    key: K,
-    value: EditorSettings[K]
-  ) => void;
-}
-
-export const EditorSettingsDialog = ({
-  settings,
-  updateSetting,
-}: EditorSettingsDialogProps) => {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   return (
@@ -76,7 +50,7 @@ export const EditorSettingsDialog = ({
               <Switch
                 checked={settings.lineNumbers}
                 onCheckedChange={(checked) =>
-                  updateSetting('lineNumbers', checked)
+                  updateSettings({ lineNumbers: checked })
                 }
               />
             </div>
@@ -86,7 +60,7 @@ export const EditorSettingsDialog = ({
               <Switch
                 checked={settings.lineWrapping}
                 onCheckedChange={(checked) =>
-                  updateSetting('lineWrapping', checked)
+                  updateSettings({ lineWrapping: checked })
                 }
               />
             </div>
@@ -96,7 +70,7 @@ export const EditorSettingsDialog = ({
               <Select
                 value={settings.fontSize.toString()}
                 onValueChange={(value) =>
-                  updateSetting('fontSize', parseInt(value))
+                  updateSettings({ fontSize: parseInt(value) })
                 }
               >
                 <SelectTrigger className='w-28'>
@@ -116,7 +90,7 @@ export const EditorSettingsDialog = ({
               <Select
                 value={settings.keybindings.toString()}
                 onValueChange={(value) =>
-                  updateSetting('keybindings', value as 'default' | 'vim')
+                  updateSettings({ keybindings: value as 'default' | 'vim' })
                 }
               >
                 <SelectTrigger className='w-28'>
@@ -134,7 +108,7 @@ export const EditorSettingsDialog = ({
               <Select
                 value={settings.tabSize.toString()}
                 onValueChange={(value) =>
-                  updateSetting('tabSize', parseInt(value))
+                  updateSettings({ tabSize: parseInt(value) })
                 }
               >
                 <SelectTrigger className='w-28'>
