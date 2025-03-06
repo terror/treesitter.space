@@ -10,7 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Language, Position, SyntaxNode, TreeNodeInfo } from '@/lib/types';
+import type {
+  Language,
+  Position,
+  SyntaxNode,
+  TreeNode as TreeNodeType,
+} from '@/lib/types';
 import { getVisibleNodes, parse, processTree } from '@/lib/utils';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import {
@@ -45,14 +50,15 @@ import { useEditorSettings } from './providers/editor-settings-provider';
 
 const App = () => {
   const [error, setError] = useState<string | null>(null);
-  const [formattedTree, setFormattedTree] = useState<TreeNodeInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const [formattedTree, setFormattedTree] = useState<TreeNodeType[]>([]);
+  const [hoveredNode, setHoveredNode] = useState<SyntaxNode | null>(null);
+
   const [parser, setParser] = useState<Parser | undefined>(undefined);
 
-  const [languages, sets] = useState<Map<Language, TSLanguage>>(new Map());
-
-  const [hoveredTreeNode, setHoveredTreeNode] = useState<SyntaxNode | null>(
-    null
+  const [languages, setLanguages] = useState<Map<Language, TSLanguage>>(
+    new Map()
   );
 
   const [nodeToPositionMap, setNodeToPositionMap] = useState<
@@ -70,7 +76,7 @@ const App = () => {
     useEditorSettings();
 
   useEffect(() => {
-    const setup = async () => {
+    const initialize = async () => {
       try {
         setLoading(true);
 
@@ -90,7 +96,7 @@ const App = () => {
       }
     };
 
-    setup();
+    initialize();
 
     return () => {
       if (parser) {
@@ -102,6 +108,28 @@ const App = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (hoveredNode && editorViewRef.current) {
+      const position = nodeToPositionMap.get(hoveredNode);
+
+      if (position) {
+        const { start: from, end: to } = position;
+
+        editorViewRef.current.dispatch({
+          effects: [
+            removeHighlightEffect.of(null),
+            addHighlightEffect.of({ from, to }),
+            EditorView.scrollIntoView(from, { y: 'center' }),
+          ],
+        });
+      }
+    } else if (editorViewRef.current) {
+      editorViewRef.current.dispatch({
+        effects: [removeHighlightEffect.of(null)],
+      });
+    }
+  }, [hoveredNode, nodeToPositionMap]);
 
   const onEditorUpdate = useCallback(
     (update: ViewUpdate) => {
@@ -234,52 +262,52 @@ const App = () => {
     };
   }, [parser, editorSettings.language, languages, editorSettings]);
 
-  useEffect(() => {
-    const loadLanguage = async (languageName: Language) => {
-      if (!parser || languages.has(languageName)) return;
+  const loadLanguage = async (languageName: Language) => {
+    if (!parser || languages.has(languageName)) return;
 
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        const config = languageConfig[languageName];
+      const config = languageConfig[languageName];
 
-        const language = await TSLanguage.load(config.wasmPath);
+      const language = await TSLanguage.load(config.wasmPath);
 
-        sets((prev) => {
-          const updated = new Map(prev);
-          updated.set(languageName, language);
-          return updated;
-        });
+      setLanguages((prev) => {
+        const updated = new Map(prev);
+        updated.set(languageName, language);
+        return updated;
+      });
 
-        if (languageName === editorSettings.language && editorViewRef.current) {
-          const code = editorViewRef.current.state.doc.toString();
+      if (languageName === editorSettings.language && editorViewRef.current) {
+        const code = editorViewRef.current.state.doc.toString();
 
-          const newTree = parse({ parser, language, code });
+        const newTree = parse({ parser, language, code });
 
-          if (newTree) {
-            const { formattedTree, nodePositionMap, allNodes } = processTree(
-              newTree,
-              editorViewRef.current.state.doc
-            );
+        if (newTree) {
+          const { formattedTree, nodePositionMap, allNodes } = processTree(
+            newTree,
+            editorViewRef.current.state.doc
+          );
 
-            setFormattedTree(formattedTree);
-            setNodeToPositionMap(nodePositionMap);
-            setExpandedNodes(allNodes);
-          }
+          setFormattedTree(formattedTree);
+          setNodeToPositionMap(nodePositionMap);
+          setExpandedNodes(allNodes);
         }
-      } catch (err) {
-        setError(
-          `Failed to load language ${languageName}: ${err instanceof Error ? err.message : String(err)}`
-        );
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      setError(
+        `Failed to load language ${languageName}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadLanguage(editorSettings.language);
   }, [parser, editorSettings.language, languages]);
 
-  const handleChange = (newLanguage: Language) => {
+  const handleLanguageChange = (newLanguage: Language) => {
     if (editorViewRef.current) {
       editorViewRef.current.dispatch({
         changes: {
@@ -317,44 +345,19 @@ const App = () => {
     }
   };
 
-  useEffect(() => {
-    if (hoveredTreeNode && editorViewRef.current) {
-      const position = nodeToPositionMap.get(hoveredTreeNode);
+  const expandNode = useCallback((node: SyntaxNode) => {
+    setExpandedNodes((prevExpandedNodes) => {
+      const newExpandedNodes = new Set(prevExpandedNodes);
 
-      if (position) {
-        const { start: from, end: to } = position;
-
-        editorViewRef.current.dispatch({
-          effects: [
-            removeHighlightEffect.of(null),
-            addHighlightEffect.of({ from, to }),
-            EditorView.scrollIntoView(from, { y: 'center' }),
-          ],
-        });
+      if (newExpandedNodes.has(node)) {
+        newExpandedNodes.delete(node);
+      } else {
+        newExpandedNodes.add(node);
       }
-    } else if (editorViewRef.current) {
-      editorViewRef.current.dispatch({
-        effects: [removeHighlightEffect.of(null)],
-      });
-    }
-  }, [hoveredTreeNode, nodeToPositionMap]);
 
-  const toggleNodeExpansion = useCallback(
-    (node: SyntaxNode) => {
-      setExpandedNodes((prevExpandedNodes) => {
-        const newExpandedNodes = new Set(prevExpandedNodes);
-
-        if (newExpandedNodes.has(node)) {
-          newExpandedNodes.delete(node);
-        } else {
-          newExpandedNodes.add(node);
-        }
-
-        return newExpandedNodes;
-      });
-    },
-    [expandedNodes]
-  );
+      return newExpandedNodes;
+    });
+  }, []);
 
   const visibleTree = useMemo(
     () => getVisibleNodes(formattedTree, expandedNodes),
@@ -393,7 +396,9 @@ const App = () => {
                 <div className='flex items-center'>
                   <Select
                     value={editorSettings.language}
-                    onValueChange={(value) => handleChange(value as Language)}
+                    onValueChange={(value) =>
+                      handleLanguageChange(value as Language)
+                    }
                   >
                     <SelectTrigger className='h-7 w-36 bg-white text-sm'>
                       <SelectValue placeholder='Select language' />
@@ -428,10 +433,10 @@ const App = () => {
                     <TreeNode
                       key={index}
                       item={item}
-                      hoveredTreeNode={hoveredTreeNode}
-                      setHoveredTreeNode={setHoveredTreeNode}
+                      hoveredNode={hoveredNode}
+                      setHoveredNode={setHoveredNode}
                       expandedNodes={expandedNodes}
-                      toggleNodeExpansion={toggleNodeExpansion}
+                      expandNode={expandNode}
                     />
                   ))}
                 </div>

@@ -1,24 +1,24 @@
-import { SyntaxNode, TreeNodeInfo } from '@/lib/types';
+import type { SyntaxNode, TreeNode as TreeNodeType } from '@/lib/types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface TreeNodeProps {
-  item: TreeNodeInfo;
-  hoveredTreeNode: SyntaxNode | null;
-  setHoveredTreeNode: (node: SyntaxNode | null) => void;
+  expandNode: (node: SyntaxNode) => void;
   expandedNodes: Set<SyntaxNode>;
-  toggleNodeExpansion: (node: SyntaxNode) => void;
+  hoveredNode: SyntaxNode | null;
+  item: TreeNodeType;
+  setHoveredNode: (node: SyntaxNode | null) => void;
 }
 
 export const TreeNode: React.FC<TreeNodeProps> = ({
-  item,
-  hoveredTreeNode,
-  setHoveredTreeNode,
+  expandNode,
   expandedNodes,
-  toggleNodeExpansion,
+  hoveredNode,
+  item,
+  setHoveredNode,
 }) => {
-  const isHovered = item.node === hoveredTreeNode;
   const hasChildren = item.node.childCount > 0;
   const isExpanded = expandedNodes.has(item.node);
+  const isHovered = item.node === hoveredNode;
 
   const style = {
     paddingLeft: `${item.level * 16 + 4}px`,
@@ -30,9 +30,9 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     <div
       className='tree-node flex cursor-pointer items-center py-1 font-mono text-sm whitespace-nowrap transition-colors hover:bg-blue-50'
       style={style}
-      onMouseEnter={() => setHoveredTreeNode(item.node)}
-      onMouseLeave={() => setHoveredTreeNode(null)}
-      onClick={() => hasChildren && toggleNodeExpansion(item.node)}
+      onMouseEnter={() => setHoveredNode(item.node)}
+      onMouseLeave={() => setHoveredNode(null)}
+      onClick={() => hasChildren && expandNode(item.node)}
     >
       <span className='mr-1 flex w-4 justify-center'>
         {hasChildren ? (

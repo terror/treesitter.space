@@ -4,14 +4,14 @@ import _ from 'lodash';
 import { twMerge } from 'tailwind-merge';
 import { Language, Parser, Tree } from 'web-tree-sitter';
 
-import { Position, SyntaxNode, TreeNodeInfo } from './types';
+import { Position, SyntaxNode, TreeNode } from './types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export const createNodePositionMap = (
-  formattedTree: TreeNodeInfo[],
+  formattedTree: TreeNode[],
   doc: EditorState['doc']
 ): Map<SyntaxNode, Position> => {
   return _.reduce(
@@ -31,7 +31,7 @@ export const createNodePositionMap = (
 };
 
 export const createNodeToParentMap = (
-  formattedTree: TreeNodeInfo[]
+  formattedTree: TreeNode[]
 ): Map<SyntaxNode, SyntaxNode> => {
   const nodeToParentMap = new Map<SyntaxNode, SyntaxNode>();
 
@@ -53,7 +53,7 @@ export const createNodeToParentMap = (
   return nodeToParentMap;
 };
 
-export const formatTree = (node: SyntaxNode, indent = 0): TreeNodeInfo[] => {
+export const formatTree = (node: SyntaxNode, indent = 0): TreeNode[] => {
   const nodeInfo = {
     text: `${node.type} [${node.startPosition.row},${node.startPosition.column}]`,
     node,
@@ -74,9 +74,9 @@ export const formatTree = (node: SyntaxNode, indent = 0): TreeNodeInfo[] => {
 };
 
 export const getVisibleNodes = (
-  formattedTree: TreeNodeInfo[],
+  formattedTree: TreeNode[],
   expandedNodes: Set<SyntaxNode>
-): TreeNodeInfo[] => {
+): TreeNode[] => {
   if (_.isEmpty(formattedTree)) return [];
 
   const nodeToParentMap = createNodeToParentMap(formattedTree);
@@ -140,7 +140,7 @@ export const processTree = (
   tree: Tree,
   doc: EditorState['doc']
 ): {
-  formattedTree: TreeNodeInfo[];
+  formattedTree: TreeNode[];
   nodePositionMap: Map<SyntaxNode, Position>;
   allNodes: Set<SyntaxNode>;
 } => {

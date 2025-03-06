@@ -1,14 +1,5 @@
 import { Extension } from '@codemirror/state';
 
-export interface SyntaxNode {
-  type: string;
-  text: string;
-  startPosition: { row: number; column: number };
-  endPosition: { row: number; column: number };
-  childCount: number;
-  children: SyntaxNode[];
-}
-
 export type Language =
   | 'cpp'
   | 'css'
@@ -29,14 +20,23 @@ export interface LanguageConfig {
   cmExtension: Extension;
 }
 
-export interface TreeNodeInfo {
+export type Position = {
+  start: number;
+  end: number;
+};
+
+export interface SyntaxNode {
+  type: string;
+  text: string;
+  startPosition: { row: number; column: number };
+  endPosition: { row: number; column: number };
+  childCount: number;
+  children: SyntaxNode[];
+}
+
+export interface TreeNode {
   text: string;
   node: SyntaxNode;
   level: number;
   type: string;
 }
-
-export type Position = {
-  start: number;
-  end: number;
-};
