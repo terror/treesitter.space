@@ -9,7 +9,17 @@ export interface SyntaxNode {
   children: SyntaxNode[];
 }
 
-export type SupportedLanguage = 'javascript' | 'python' | 'rust' | 'cpp';
+export type SupportedLanguage =
+  | 'cpp'
+  | 'css'
+  | 'go'
+  | 'html'
+  | 'java'
+  | 'javascript'
+  | 'json'
+  | 'php'
+  | 'python'
+  | 'rust';
 
 export interface LanguageConfig {
   name: SupportedLanguage;

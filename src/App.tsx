@@ -157,20 +157,21 @@ const App = () => {
     if (!editorRef.current) return;
 
     const theme = EditorView.theme({
-      '&': {
-        height: '100%',
-        fontSize: `${editorSettings.fontSize}px`,
-        display: 'flex',
-        flexDirection: 'column',
-      },
-      '&.cm-editor.cm-focused': {
-        outline: 'none',
-      },
-      '.cm-scroller': {
-        overflow: 'auto',
-        fontFamily:
-          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-      },
+'&': {
+    height: '100%',
+    fontSize: `${editorSettings.fontSize}px`,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  '&.cm-editor': {
+    height: '100%', // Ensure editor takes full height
+  },
+  '.cm-scroller': {
+    overflow: 'auto',
+    flex: '1 1 auto', // Allow scroller to grow
+    fontFamily:
+      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  },
       '.cm-content': {
         padding: '10px 0',
       },
@@ -462,7 +463,7 @@ const App = () => {
                   updateSetting={updateEditorSetting}
                 />
               </div>
-              <div ref={editorRef} className='w-full flex-1' />
+              <div ref={editorRef} className="w-full flex-1 overflow-hidden" />
             </div>
           </ResizablePanel>
 

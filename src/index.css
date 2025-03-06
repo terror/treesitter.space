@@ -132,3 +132,28 @@
 .cm-editor {
   height: 100%;
 }
+
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(182, 182, 182);
+  border-radius: 20px;
+  border: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(150, 150, 150);
+}
+
+.scrollable-element {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(182, 182, 182) transparent;
+}
