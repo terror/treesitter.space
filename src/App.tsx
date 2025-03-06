@@ -54,9 +54,6 @@ const App = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [parser, setParser] = useState<Parser | undefined>(undefined);
 
-  const [currentLanguage, setCurrentLanguage] =
-    useState<SupportedLanguage>('javascript');
-
   const [languages, setLanguages] = useState<Map<SupportedLanguage, Language>>(
     new Map()
   );
@@ -76,7 +73,8 @@ const App = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
 
-  const { settings: editorSettings } = useEditorSettings();
+  const { settings: editorSettings, updateSettings: updateEditorSettings } =
+    useEditorSettings();
 
   useEffect(() => {
     const setup = async () => {
@@ -114,10 +112,14 @@ const App = () => {
 
   const onEditorUpdate = useCallback(
     (update: ViewUpdate) => {
-      if (update.docChanged && parser && languages.has(currentLanguage)) {
+      if (
+        update.docChanged &&
+        parser &&
+        languages.has(editorSettings.language)
+      ) {
         const newCode = update.state.doc.toString();
 
-        const language = languages.get(currentLanguage);
+        const language = languages.get(editorSettings.language);
 
         if (!language) return;
 
@@ -136,12 +138,12 @@ const App = () => {
       }
     },
     [
-      parser,
+      editorSettings.language,
       languages,
-      currentLanguage,
+      parser,
+      setExpandedNodes,
       setFormattedTree,
       setNodeToPositionMap,
-      setExpandedNodes,
     ]
   );
 
@@ -206,7 +208,7 @@ const App = () => {
       history(),
       indentOnInput(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      languageConfig[currentLanguage].cmExtension,
+      languageConfig[editorSettings.language].cmExtension,
       syntaxHighlighting(defaultHighlightStyle),
     ];
 
@@ -223,7 +225,7 @@ const App = () => {
     }
 
     const state = EditorState.create({
-      doc: languageConfig[currentLanguage].sampleCode,
+      doc: languageConfig[editorSettings.language].sampleCode,
       extensions: extensions,
     });
 
@@ -237,7 +239,7 @@ const App = () => {
     return () => {
       view.destroy();
     };
-  }, [parser, currentLanguage, languages, editorSettings]);
+  }, [parser, editorSettings.language, languages, editorSettings]);
 
   useEffect(() => {
     const loadCurrentLanguage = async (langName: SupportedLanguage) => {
@@ -256,7 +258,7 @@ const App = () => {
           return updated;
         });
 
-        if (langName === currentLanguage && editorViewRef.current) {
+        if (langName === editorSettings.language && editorViewRef.current) {
           const code = editorViewRef.current.state.doc.toString();
           const newTree = parseCode(parser, language, code);
 
@@ -280,10 +282,10 @@ const App = () => {
       }
     };
 
-    if (parser && !languages.has(currentLanguage)) {
-      loadCurrentLanguage(currentLanguage);
+    if (parser && !languages.has(editorSettings.language)) {
+      loadCurrentLanguage(editorSettings.language);
     }
-  }, [parser, currentLanguage, languages]);
+  }, [parser, editorSettings.language, languages]);
 
   const handleLanguageChange = (lang: SupportedLanguage) => {
     if (editorViewRef.current) {
@@ -298,7 +300,7 @@ const App = () => {
         ),
       });
 
-      setCurrentLanguage(lang);
+      updateEditorSettings({ language: lang });
 
       if (parser && languages.has(lang)) {
         const code = editorViewRef.current.state.doc.toString();
@@ -394,7 +396,7 @@ const App = () => {
               <div className='flex items-center justify-between border-b bg-gray-50 px-2 py-1'>
                 <div className='flex items-center'>
                   <Select
-                    value={currentLanguage}
+                    value={editorSettings.language}
                     onValueChange={(value) =>
                       handleLanguageChange(value as SupportedLanguage)
                     }
