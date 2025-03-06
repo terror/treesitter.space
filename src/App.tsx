@@ -132,7 +132,7 @@ const App = () => {
     editorViewRef.current.dispatch({
       effects: [
         compartments.vim.current.reconfigure(
-          editorSettings.vimMode ? vim() : []
+          editorSettings.keybindings === 'vim' ? vim() : []
         ),
         compartments.lineWrap.current.reconfigure(
           editorSettings.lineWrapping ? EditorView.lineWrapping : []
@@ -224,7 +224,9 @@ const App = () => {
     };
 
     const editorExtensions: Extension[] = [
-      compartments.vim.current.of(editorSettings.vimMode ? vim() : []),
+      compartments.vim.current.of(
+        editorSettings.keybindings === 'vim' ? vim() : []
+      ),
       compartments.lineNumbers.current.of(
         editorSettings.lineNumbers ? lineNumbers() : []
       ),
@@ -454,7 +456,7 @@ const App = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {editorSettings.vimMode && (
+                  {editorSettings.keybindings === 'vim' && (
                     <span className='ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs'>
                       VIM
                     </span>
