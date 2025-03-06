@@ -9,29 +9,56 @@ import { php } from '@codemirror/lang-php';
 import { python } from '@codemirror/lang-python';
 import { rust } from '@codemirror/lang-rust';
 
-import type { LanguageConfig, SupportedLanguage } from './types';
-
-export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
+export const languageConfig = {
   javascript: {
     name: 'javascript',
     displayName: 'JavaScript',
     wasmPath: 'tree-sitter-javascript.wasm',
     sampleCode:
-      '// Interactive greeting app\n' +
-      'const userName = "Explorer";\n' +
-      'let visitCount = 1;\n\n' +
-      'function createGreeting(name, count) {\n' +
-      '  const time = new Date().getHours();\n' +
-      '  let greeting = "";\n\n' +
-      '  if (time < 12) greeting = "Good morning";\n' +
-      '  else if (time < 18) greeting = "Good afternoon";\n' +
-      '  else greeting = "Good evening";\n\n' +
-      '  console.log(`${greeting}, ${name}!`);\n' +
-      '  console.log(`This is visit #${count}`);\n' +
-      '  return count + 1;\n' +
-      '}\n\n' +
-      'visitCount = createGreeting(userName, visitCount);\n' +
-      'console.log("Welcome to the interactive console!");',
+      'const calculateStats = (data = []) => {\n' +
+      '  const sum = data.reduce((acc, val) => acc + val, 0);\n' +
+      '  const avg = sum / (data.length || 1);\n' +
+      '  \n' +
+      '  return {\n' +
+      '    count: data.length,\n' +
+      '    sum,\n' +
+      '    avg,\n' +
+      '    min: Math.min(...(data.length ? data : [0])),\n' +
+      '    max: Math.max(...(data.length ? data : [0])),\n' +
+      '    has: val => data.includes(val),\n' +
+      '  };\n' +
+      '};\n' +
+      '\n' +
+      'class DataAnalyzer {\n' +
+      '  #privateData = [];\n' +
+      '  \n' +
+      '  constructor(initialData) {\n' +
+      '    this.#privateData = [...initialData];\n' +
+      '  }\n' +
+      '  \n' +
+      '  addData(items) {\n' +
+      '    this.#privateData.push(...items);\n' +
+      '    return this;\n' +
+      '  }\n' +
+      '  \n' +
+      '  get stats() {\n' +
+      '    return calculateStats(this.#privateData);\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'const analyzer = new DataAnalyzer([23, 45, 12, 67]);\n' +
+      'analyzer.addData([88, 91]);\n' +
+      'console.log(`Stats: ${JSON.stringify(analyzer.stats)}`);\n' +
+      '\n' +
+      'const fetchUserData = async (userId) => {\n' +
+      '  try {\n' +
+      '    const response = await Promise.resolve({ name: "Alex", id: userId });\n' +
+      '    const { name } = response;\n' +
+      '    return `Hello, ${name}!`;\n' +
+      '  } catch (error) {\n' +
+      '    return `Error: ${error.message}`;\n' +
+      '  }\n' +
+      '};',
     cmExtension: javascript(),
   },
   python: {
@@ -39,27 +66,38 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     displayName: 'Python',
     wasmPath: 'tree-sitter-python.wasm',
     sampleCode:
-      '# Temperature converter with validation\n' +
-      'import random\n\n' +
-      'def celsius_to_fahrenheit(celsius):\n' +
-      '  """Convert Celsius to Fahrenheit temperature."""\n' +
-      '  if not isinstance(celsius, (int, float)):\n' +
-      '    raise TypeError("Temperature must be a number")\n' +
-      '  return (celsius * 9/5) + 32\n\n' +
-      'def fahrenheit_to_celsius(fahrenheit):\n' +
-      '  """Convert Fahrenheit to Celsius temperature."""\n' +
-      '  if not isinstance(fahrenheit, (int, float)):\n' +
-      '    raise TypeError("Temperature must be a number")\n' +
-      '  return (fahrenheit - 32) * 5/9\n\n' +
-      '# Generate random temperatures to convert\n' +
-      'for _ in range(3):\n' +
-      '  temp_c = round(random.uniform(-10, 40), 1)\n' +
-      '  temp_f = celsius_to_fahrenheit(temp_c)\n' +
-      '  print(f"{temp_c}°C = {temp_f:.1f}°F")\n' +
+      'from typing import List, Dict, Optional, Callable\n' +
+      'from dataclasses import dataclass\n' +
+      'from functools import reduce\n' +
+      '\n' +
+      '@dataclass\n' +
+      'class Measurement:\n' +
+      '  value: float\n' +
+      '  unit: str\n' +
+      '  timestamp: Optional[float] = None\n' +
       '  \n' +
-      '  temp_f = round(random.uniform(0, 100), 1)\n' +
-      '  temp_c = fahrenheit_to_celsius(temp_f)\n' +
-      '  print(f"{temp_f}°F = {temp_c:.1f}°C")',
+      '  def convert(self, target_unit: str, conversion_fn: Callable) -> "Measurement":\n' +
+      '    return Measurement(\n' +
+      '      value=conversion_fn(self.value),\n' +
+      '      unit=target_unit,\n' +
+      '      timestamp=self.timestamp\n' +
+      '    )\n' +
+      '\n' +
+      'def analyze_data(measurements: List[Measurement]) -> Dict:\n' +
+      '  if not measurements:\n' +
+      '    return {"count": 0, "avg": None}\n' +
+      '    \n' +
+      '  total = reduce(lambda acc, m: acc + m.value, measurements, 0)\n' +
+      '  return {\n' +
+      '    "count": len(measurements),\n' +
+      '    "avg": total / len(measurements),\n' +
+      '    "units": {m.unit for m in measurements},\n' +
+      '    "values": [m.value for m in measurements]\n' +
+      '  }\n' +
+      '\n' +
+      'data = [Measurement(value, "celsius") for value in [22.5, 19.8, 25.1, 20.0]]\n' +
+      'result = analyze_data(data)\n' +
+      "print(f\"Analyzed {result['count']} measurements, average: {result['avg']:.1f}°C\")",
     cmExtension: python(),
   },
   rust: {
@@ -67,35 +105,51 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     displayName: 'Rust',
     wasmPath: 'tree-sitter-rust.wasm',
     sampleCode:
-      '// A Fibonacci sequence generator with memoization\n' +
       'use std::collections::HashMap;\n' +
-      'use std::io;\n\n' +
-      'struct FibCalculator {\n' +
-      '    cache: HashMap<u64, u64>,\n' +
-      '}\n\n' +
-      'impl FibCalculator {\n' +
-      '    fn new() -> Self {\n' +
-      '        let mut cache = HashMap::new();\n' +
-      '        cache.insert(0, 0);\n' +
-      '        cache.insert(1, 1);\n' +
-      '        FibCalculator { cache }\n' +
-      '    }\n\n' +
-      '    fn calculate(&mut self, n: u64) -> u64 {\n' +
-      '        if let Some(&result) = self.cache.get(&n) {\n' +
-      '            return result;\n' +
-      '        }\n' +
-      '        let result = self.calculate(n - 1) + self.calculate(n - 2);\n' +
-      '        self.cache.insert(n, result);\n' +
-      '        result\n' +
+      '\n' +
+      '#[derive(Debug, Clone)]\n' +
+      'struct StockItem {\n' +
+      '  name: String,\n' +
+      '  price: f64,\n' +
+      '  quantity: u32,\n' +
+      '}\n' +
+      '\n' +
+      'impl StockItem {\n' +
+      '  fn new(name: &str, price: f64, quantity: u32) -> Self {\n' +
+      '    Self {\n' +
+      '      name: name.to_string(),\n' +
+      '      price,\n' +
+      '      quantity,\n' +
       '    }\n' +
-      '}\n\n' +
+      '  }\n' +
+      '  \n' +
+      '  fn total_value(&self) -> f64 {\n' +
+      '    self.price * self.quantity as f64\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
       'fn main() {\n' +
-      '    println!("Fibonacci Sequence Generator");\n' +
-      '    let mut calculator = FibCalculator::new();\n\n' +
-      '    for i in 0..10 {\n' +
-      '        let result = calculator.calculate(i);\n' +
-      '        println!("Fibonacci({}) = {}", i, result);\n' +
-      '    }\n' +
+      '  let inventory = vec![\n' +
+      '    StockItem::new("Laptop", 1200.0, 5),\n' +
+      '    StockItem::new("Mouse", 25.5, 30),\n' +
+      '    StockItem::new("Monitor", 350.0, 8),\n' +
+      '  ];\n' +
+      '  \n' +
+      '  let total_inventory_value: f64 = inventory\n' +
+      '    .iter()\n' +
+      '    .map(|item| item.total_value())\n' +
+      '    .sum();\n' +
+      '    \n' +
+      '  let most_valuable = inventory.iter().max_by(|a, b| {\n' +
+      '    a.total_value().partial_cmp(&b.total_value()).unwrap()\n' +
+      '  });\n' +
+      '  \n' +
+      '  match most_valuable {\n' +
+      '    Some(item) => println!("Most valuable: {}, ${:.2}", item.name, item.total_value()),\n' +
+      '    None => println!("Inventory is empty"),\n' +
+      '  }\n' +
+      '  \n' +
+      '  println!("Total inventory value: ${:.2}", total_inventory_value);\n' +
       '}',
     cmExtension: rust(),
   },
@@ -106,53 +160,50 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     sampleCode:
       '#include <iostream>\n' +
       '#include <vector>\n' +
-      '#include <string>\n' +
-      '#include <algorithm>\n\n' +
-      'class Student {\n' +
-      'private:\n' +
-      '  std::string name;\n' +
-      '  int id;\n' +
-      '  std::vector<double> grades;\n\n' +
+      '#include <algorithm>\n' +
+      '#include <memory>\n' +
+      '#include <functional>\n' +
+      '\n' +
+      'class Device {\n' +
       'public:\n' +
-      '  Student(std::string n, int i) : name(n), id(i) {}\n\n' +
-      '  void addGrade(double grade) {\n' +
-      '    if (grade >= 0.0 && grade <= 100.0) {\n' +
-      '      grades.push_back(grade);\n' +
-      '    } else {\n' +
-      '      std::cerr << "Invalid grade: " << grade << std::endl;\n' +
-      '    }\n' +
-      '  }\n\n' +
-      '  double getAverage() const {\n' +
-      '    if (grades.empty()) return 0.0;\n' +
-      '    double sum = 0.0;\n' +
-      '    for (double grade : grades) {\n' +
-      '      sum += grade;\n' +
-      '    }\n' +
-      '    return sum / grades.size();\n' +
-      '  }\n\n' +
-      '  std::string getName() const { return name; }\n' +
-      '  int getId() const { return id; }\n' +
-      '};\n\n' +
-      'int main() {\n' +
-      '  std::vector<Student> students;\n' +
+      '  virtual ~Device() = default;\n' +
+      '  virtual void process() const = 0;\n' +
+      '  virtual std::string name() const = 0;\n' +
+      '};\n' +
+      '\n' +
+      'class Sensor : public Device {\n' +
+      'private:\n' +
+      '  std::string id;\n' +
+      '  double value;\n' +
       '  \n' +
-      '  students.push_back(Student("Alice", 1001));\n' +
-      '  students.push_back(Student("Bob", 1002));\n' +
-      '  students.push_back(Student("Charlie", 1003));\n\n' +
-      '  students[0].addGrade(92.5);\n' +
-      '  students[0].addGrade(88.0);\n' +
-      '  students[0].addGrade(95.5);\n\n' +
-      '  students[1].addGrade(75.0);\n' +
-      '  students[1].addGrade(83.5);\n\n' +
-      '  students[2].addGrade(91.0);\n' +
-      '  students[2].addGrade(89.5);\n' +
-      '  students[2].addGrade(94.0);\n\n' +
-      '  std::cout << "Student Grade Report:" << std::endl;\n' +
-      '  std::cout << "---------------------" << std::endl;\n\n' +
-      '  for (const auto& student : students) {\n' +
-      '    std::cout << "ID: " << student.getId() << ", Name: " << student.getName()\n' +
-      '              << ", Average: " << student.getAverage() << std::endl;\n' +
-      '  }\n\n' +
+      'public:\n' +
+      '  Sensor(std::string id, double value) : id(std::move(id)), value(value) {}\n' +
+      '  \n' +
+      '  void process() const override {\n' +
+      '    std::cout << "Sensor " << id << ": " << value << std::endl;\n' +
+      '  }\n' +
+      '  \n' +
+      '  std::string name() const override { return "Sensor-" + id; }\n' +
+      '};\n' +
+      '\n' +
+      'int main() {\n' +
+      '  std::vector<std::unique_ptr<Device>> devices;\n' +
+      '  \n' +
+      '  auto add_sensor = [&devices](auto id, auto value) {\n' +
+      '    devices.push_back(std::make_unique<Sensor>(id, value));\n' +
+      '  };\n' +
+      '  \n' +
+      '  add_sensor("temp", 22.5);\n' +
+      '  add_sensor("humidity", 45.2);\n' +
+      '  \n' +
+      '  for (const auto& device : devices) {\n' +
+      '    device->process();\n' +
+      '  }\n' +
+      '  \n' +
+      '  std::for_each(devices.begin(), devices.end(), [](const auto& d) {\n' +
+      '    std::cout << "Device: " << d->name() << std::endl;\n' +
+      '  });\n' +
+      '  \n' +
       '  return 0;\n' +
       '}',
     cmExtension: cpp(),
@@ -162,50 +213,40 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     displayName: 'Java',
     wasmPath: 'tree-sitter-java.wasm',
     sampleCode:
-      'import java.util.ArrayList;\n' +
-      'import java.util.Scanner;\n' +
-      'import java.util.Random;\n\n' +
-      'class Task {\n' +
-      '  private String description;\n' +
-      '  private boolean completed;\n' +
-      '  private int priority;\n\n' +
-      '  public Task(String description, int priority) {\n' +
-      '    this.description = description;\n' +
-      '    this.completed = false;\n' +
-      '    this.priority = priority;\n' +
-      '  }\n\n' +
-      '  public String getDescription() { return description; }\n' +
-      '  public boolean isCompleted() { return completed; }\n' +
-      '  public int getPriority() { return priority; }\n' +
-      '  public void markCompleted() { this.completed = true; }\n\n' +
-      '  @Override\n' +
-      '  public String toString() {\n' +
-      '    return String.format("[%s] %s (Priority: %d)",\n' +
-      '      completed ? "✓" : " ", description, priority);\n' +
+      'import java.util.List;\n' +
+      'import java.util.stream.Collectors;\n' +
+      'import java.util.Optional;\n' +
+      '\n' +
+      'record Product(String id, String name, double price, Category category) {\n' +
+      '  public enum Category { ELECTRONICS, BOOKS, CLOTHING }\n' +
+      '  \n' +
+      '  public boolean isExpensive() {\n' +
+      '    return price > 100;\n' +
       '  }\n' +
-      '}\n\n' +
+      '}\n' +
+      '\n' +
       'public class Main {\n' +
       '  public static void main(String[] args) {\n' +
-      '    ArrayList<Task> tasks = new ArrayList<>();\n' +
-      '    Random random = new Random();\n\n' +
-      '    // Sample tasks\n' +
-      '    tasks.add(new Task("Complete Java assignment", 1));\n' +
-      '    tasks.add(new Task("Read chapter 10", 2));\n' +
-      '    tasks.add(new Task("Prepare for quiz", 1));\n' +
-      '    tasks.add(new Task("Research project topics", 3));\n\n' +
-      '    // Mark random tasks as completed\n' +
-      '    for (int i = 0; i < 2; i++) {\n' +
-      '      int index = random.nextInt(tasks.size());\n' +
-      '      tasks.get(index).markCompleted();\n' +
-      '    }\n\n' +
-      '    // Display all tasks\n' +
-      '    System.out.println("=== Task Manager ===");\n' +
-      '    for (int i = 0; i < tasks.size(); i++) {\n' +
-      '      System.out.println((i + 1) + ". " + tasks.get(i));\n' +
-      '    }\n\n' +
-      '    // Summary\n' +
-      '    long completedCount = tasks.stream().filter(Task::isCompleted).count();\n' +
-      '    System.out.println("\\nCompleted: " + completedCount + "/" + tasks.size() + " tasks");\n' +
+      '    var products = List.of(\n' +
+      '      new Product("p1", "Laptop", 899.99, Product.Category.ELECTRONICS),\n' +
+      '      new Product("p2", "Java Programming", 49.99, Product.Category.BOOKS),\n' +
+      '      new Product("p3", "Smartphone", 699.99, Product.Category.ELECTRONICS),\n' +
+      '      new Product("p4", "T-Shirt", 19.99, Product.Category.CLOTHING)\n' +
+      '    );\n' +
+      '    \n' +
+      '    double totalElectronicsValue = products.stream()\n' +
+      '      .filter(p -> p.category() == Product.Category.ELECTRONICS)\n' +
+      '      .mapToDouble(Product::price)\n' +
+      '      .sum();\n' +
+      '      \n' +
+      '    Optional<Product> cheapestProduct = products.stream()\n' +
+      '      .min((p1, p2) -> Double.compare(p1.price(), p2.price()));\n' +
+      '    \n' +
+      '    cheapestProduct.ifPresent(p -> \n' +
+      '      System.out.printf("Cheapest: %s, $%.2f%n", p.name(), p.price())\n' +
+      '    );\n' +
+      '    \n' +
+      '    System.out.printf("Total electronics value: $%.2f%n", totalElectronicsValue);\n' +
       '  }\n' +
       '}',
     cmExtension: java(),
@@ -216,62 +257,46 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     wasmPath: 'tree-sitter-php.wasm',
     sampleCode:
       '<?php\n' +
-      '// Recipe Management System\n' +
-      'class Recipe {\n' +
-      '  private $name;\n' +
-      '  private $ingredients = [];\n' +
-      '  private $preparationTime;\n' +
-      '  private $difficulty;\n\n' +
-      '  public function __construct($name, $preparationTime, $difficulty) {\n' +
+      'declare(strict_types=1);\n' +
+      '\n' +
+      'class User {\n' +
+      '  private int $id;\n' +
+      '  private string $name;\n' +
+      '  private array $roles;\n' +
+      '  private ?string $email;\n' +
+      '  \n' +
+      '  public function __construct(\n' +
+      '    int $id,\n' +
+      '    string $name,\n' +
+      '    array $roles = [],\n' +
+      '    ?string $email = null\n' +
+      '  ) {\n' +
+      '    $this->id = $id;\n' +
       '    $this->name = $name;\n' +
-      '    $this->preparationTime = $preparationTime;\n' +
-      '    $this->difficulty = $difficulty;\n' +
-      '  }\n\n' +
-      '  public function addIngredient($ingredient, $amount, $unit) {\n' +
-      '    $this->ingredients[] = [\n' +
-      '      "name" => $ingredient,\n' +
-      '      "amount" => $amount,\n' +
-      '      "unit" => $unit\n' +
-      '    ];\n' +
-      '  }\n\n' +
-      '  public function getName() {\n' +
+      '    $this->roles = $roles;\n' +
+      '    $this->email = $email;\n' +
+      '  }\n' +
+      '  \n' +
+      '  public function hasRole(string $role): bool {\n' +
+      '    return in_array($role, $this->roles);\n' +
+      '  }\n' +
+      '  \n' +
+      '  public function getName(): string {\n' +
       '    return $this->name;\n' +
-      '  }\n\n' +
-      '  public function getIngredients() {\n' +
-      '    return $this->ingredients;\n' +
-      '  }\n\n' +
-      '  public function getDifficulty() {\n' +
-      '    return $this->difficulty;\n' +
-      '  }\n\n' +
-      '  public function getPreparationTime() {\n' +
-      '    return $this->preparationTime;\n' +
       '  }\n' +
-      '}\n\n' +
-      '// Create recipe collection\n' +
-      '$recipes = [];\n\n' +
-      '// Add sample recipe\n' +
-      '$pancakes = new Recipe("Fluffy Pancakes", 25, "Easy");\n' +
-      '$pancakes->addIngredient("Flour", 2, "cups");\n' +
-      '$pancakes->addIngredient("Milk", 1.5, "cups");\n' +
-      '$pancakes->addIngredient("Eggs", 2, "");\n' +
-      '$pancakes->addIngredient("Baking Powder", 2, "tsp");\n' +
-      '$pancakes->addIngredient("Sugar", 3, "tbsp");\n' +
-      '$pancakes->addIngredient("Salt", 0.5, "tsp");\n' +
-      '$pancakes->addIngredient("Butter", 2, "tbsp");\n' +
-      '$recipes[] = $pancakes;\n\n' +
-      '// Display recipe\n' +
-      'echo "<h1>Recipe Book</h1>";\n\n' +
-      'foreach ($recipes as $recipe) {\n' +
-      '  echo "<h2>" . $recipe->getName() . "</h2>";\n' +
-      '  echo "<p><strong>Difficulty:</strong> " . $recipe->getDifficulty() . "</p>";\n' +
-      '  echo "<p><strong>Preparation Time:</strong> " . $recipe->getPreparationTime() . " minutes</p>";\n\n' +
-      '  echo "<h3>Ingredients:</h3>";\n' +
-      '  echo "<ul>";\n' +
-      '  foreach ($recipe->getIngredients() as $ingredient) {\n' +
-      '    echo "<li>" . $ingredient["amount"] . " " . $ingredient["unit"] . " " . $ingredient["name"] . "</li>";\n' +
-      '  }\n' +
-      '  echo "</ul>";\n' +
       '}\n' +
+      '\n' +
+      '$users = [\n' +
+      '  new User(1, "Alice", ["admin", "editor"]),\n' +
+      '  new User(2, "Bob", ["user"]),\n' +
+      '  new User(3, "Carol", ["editor"], "carol@example.com")\n' +
+      '];\n' +
+      '\n' +
+      '$admins = array_filter($users, fn($user) => $user->hasRole("admin"));\n' +
+      '$names = array_map(fn($user) => $user->getName(), $users);\n' +
+      '\n' +
+      'echo "Admins: " . count($admins) . "\\n";\n' +
+      'echo "Users: " . implode(", ", $names) . "\\n";\n' +
       '?>',
     cmExtension: php(),
   },
@@ -285,95 +310,77 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
       '<head>\n' +
       '  <meta charset="UTF-8">\n' +
       '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-      '  <title>Photography Portfolio</title>\n' +
+      '  <title>Modern Web Components</title>\n' +
       '  <style>\n' +
       '    :root {\n' +
-      '      --primary-color: #3a4e6a;\n' +
-      '      --accent-color: #e07a5f;\n' +
-      '      --light-color: #f2f5f9;\n' +
-      '      --dark-color: #2f3a4a;\n' +
+      '      --primary: #3a86ff;\n' +
+      '      --accent: #ff006e;\n' +
+      '      --dark: #1a1a1a;\n' +
+      '      --light: #f8f9fa;\n' +
       '    }\n' +
       '    body {\n' +
-      "      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n" +
+      '      font-family: system-ui, sans-serif;\n' +
       '      line-height: 1.6;\n' +
-      '      color: var(--dark-color);\n' +
-      '      background-color: var(--light-color);\n' +
+      '      color: var(--dark);\n' +
+      '      background: var(--light);\n' +
       '      margin: 0;\n' +
-      '      padding: 0;\n' +
-      '    }\n' +
-      '    header {\n' +
-      '      background-color: var(--primary-color);\n' +
-      '      color: white;\n' +
-      '      padding: 2rem 0;\n' +
-      '      text-align: center;\n' +
-      '    }\n' +
-      '    .gallery {\n' +
       '      display: grid;\n' +
-      '      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));\n' +
-      '      gap: 1.5rem;\n' +
-      '      padding: 2rem;\n' +
+      '      place-items: center;\n' +
+      '      min-height: 100vh;\n' +
       '    }\n' +
-      '    .gallery-item {\n' +
-      '      overflow: hidden;\n' +
+      '    .card {\n' +
+      '      max-width: 400px;\n' +
       '      border-radius: 8px;\n' +
-      '      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);\n' +
-      '      transition: transform 0.3s ease;\n' +
+      '      overflow: hidden;\n' +
+      '      box-shadow: 0 10px 25px rgba(0,0,0,.1);\n' +
+      '      background: white;\n' +
       '    }\n' +
-      '    .gallery-item:hover {\n' +
-      '      transform: translateY(-5px);\n' +
+      '    .card-img {\n' +
+      '      height: 200px;\n' +
+      '      background: linear-gradient(45deg, var(--primary), var(--accent));\n' +
+      '      position: relative;\n' +
       '    }\n' +
-      '    .gallery-item img {\n' +
-      '      width: 100%;\n' +
-      '      height: 250px;\n' +
-      '      object-fit: cover;\n' +
-      '      display: block;\n' +
+      '    .badge {\n' +
+      '      position: absolute;\n' +
+      '      top: 12px;\n' +
+      '      right: 12px;\n' +
+      '      padding: 4px 12px;\n' +
+      '      background: rgba(255,255,255,.9);\n' +
+      '      border-radius: 20px;\n' +
+      '      font-weight: 600;\n' +
+      '      font-size: 0.8rem;\n' +
+      '      color: var(--accent);\n' +
       '    }\n' +
-      '    .gallery-item .caption {\n' +
-      '      padding: 1rem;\n' +
-      '      background-color: white;\n' +
+      '    .card-content {\n' +
+      '      padding: 24px;\n' +
       '    }\n' +
-      '    footer {\n' +
-      '      background-color: var(--primary-color);\n' +
+      '    .title {\n' +
+      '      margin: 0 0 8px 0;\n' +
+      '      color: var(--dark);\n' +
+      '    }\n' +
+      '    .btn {\n' +
+      '      display: inline-block;\n' +
+      '      padding: 8px 16px;\n' +
+      '      background: var(--primary);\n' +
       '      color: white;\n' +
-      '      text-align: center;\n' +
-      '      padding: 1rem 0;\n' +
-      '      margin-top: 2rem;\n' +
+      '      border-radius: 4px;\n' +
+      '      text-decoration: none;\n' +
+      '      font-weight: 500;\n' +
+      '      margin-top: 16px;\n' +
       '    }\n' +
       '  </style>\n' +
       '</head>\n' +
       '<body>\n' +
-      '  <header>\n' +
-      '    <h1>Nature Through My Lens</h1>\n' +
-      '    <p>A photography portfolio by Maria Sanchez</p>\n' +
-      '  </header>\n\n' +
-      '  <main>\n' +
-      '    <section class="gallery">\n' +
-      '      <div class="gallery-item">\n' +
-      '        <img src="https://placeholder.pics/svg/300x250/DEDEDE/555555/Mountain%20View" alt="Mountain landscape at sunset">\n' +
-      '        <div class="caption">\n' +
-      '          <h3>Mountain Twilight</h3>\n' +
-      '          <p>Sierra Nevada, California</p>\n' +
-      '        </div>\n' +
-      '      </div>\n' +
-      '      <div class="gallery-item">\n' +
-      '        <img src="https://placeholder.pics/svg/300x250/DEDEDE/555555/Ocean%20Waves" alt="Crashing waves on rocky shore">\n' +
-      '        <div class="caption">\n' +
-      '          <h3>Coastal Rhythm</h3>\n' +
-      '          <p>Big Sur, California</p>\n' +
-      '        </div>\n' +
-      '      </div>\n' +
-      '      <div class="gallery-item">\n' +
-      '        <img src="https://placeholder.pics/svg/300x250/DEDEDE/555555/Desert%20Sunset" alt="Desert landscape at sunset">\n' +
-      '        <div class="caption">\n' +
-      '          <h3>Desert Gold</h3>\n' +
-      '          <p>Death Valley, California</p>\n' +
-      '        </div>\n' +
-      '      </div>\n' +
-      '    </section>\n' +
-      '  </main>\n\n' +
-      '  <footer>\n' +
-      '    <p>© 2025 Maria Sanchez Photography. All rights reserved.</p>\n' +
-      '  </footer>\n' +
+      '  <div class="card">\n' +
+      '    <div class="card-img">\n' +
+      '      <span class="badge">New</span>\n' +
+      '    </div>\n' +
+      '    <div class="card-content">\n' +
+      '      <h2 class="title">Modern UI Components</h2>\n' +
+      '      <p>Beautiful, responsive components using CSS variables and modern layout techniques.</p>\n' +
+      '      <a href="#" class="btn">Learn More</a>\n' +
+      '    </div>\n' +
+      '  </div>\n' +
       '</body>\n' +
       '</html>',
     cmExtension: html(),
@@ -383,117 +390,79 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     displayName: 'CSS',
     wasmPath: 'tree-sitter-css.wasm',
     sampleCode:
-      '/* Modern Dashboard UI Styles */\n' +
       ':root {\n' +
-      '  --primary: #4c6ef5;\n' +
-      '  --primary-light: #e5ebff;\n' +
-      '  --success: #40c057;\n' +
-      '  --warning: #fab005;\n' +
-      '  --danger: #fa5252;\n' +
-      '  --gray-100: #f8f9fa;\n' +
-      '  --gray-200: #e9ecef;\n' +
-      '  --gray-300: #dee2e6;\n' +
-      '  --gray-800: #343a40;\n' +
-      '  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);\n' +
-      '  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);\n' +
-      '  --radius: 8px;\n' +
-      '}\n\n' +
+      '  --color-primary: #4361ee;\n' +
+      '  --color-secondary: #3a0ca3;\n' +
+      '  --color-success: #4cc9f0;\n' +
+      '  --color-warning: #f72585;\n' +
+      '  --color-light: #f8f9fa;\n' +
+      '  --color-dark: #212529;\n' +
+      '  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n' +
+      '  --font-sans: system-ui, -apple-system, sans-serif;\n' +
+      '}\n' +
+      '\n' +
       '* {\n' +
       '  margin: 0;\n' +
       '  padding: 0;\n' +
       '  box-sizing: border-box;\n' +
-      '}\n\n' +
+      '}\n' +
+      '\n' +
       'body {\n' +
-      '  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;\n' +
-      '  background-color: var(--gray-100);\n' +
-      '  color: var(--gray-800);\n' +
+      '  font-family: var(--font-sans);\n' +
+      '  color: var(--color-dark);\n' +
       '  line-height: 1.5;\n' +
-      '}\n\n' +
-      '.dashboard {\n' +
-      '  display: grid;\n' +
-      '  grid-template-columns: 240px 1fr;\n' +
-      '  min-height: 100vh;\n' +
-      '}\n\n' +
-      '.sidebar {\n' +
+      '}\n' +
+      '\n' +
+      '.container {\n' +
+      '  width: min(1200px, 90%);\n' +
+      '  margin-inline: auto;\n' +
+      '}\n' +
+      '\n' +
+      '.card {\n' +
       '  background-color: white;\n' +
-      '  border-right: 1px solid var(--gray-200);\n' +
-      '  padding: 1.5rem;\n' +
-      '}\n\n' +
-      '.sidebar-logo {\n' +
-      '  display: flex;\n' +
-      '  align-items: center;\n' +
-      '  font-weight: 700;\n' +
-      '  font-size: 1.25rem;\n' +
-      '  margin-bottom: 2rem;\n' +
-      '  color: var(--primary);\n' +
-      '}\n\n' +
-      '.sidebar-logo svg {\n' +
-      '  width: 24px;\n' +
-      '  height: 24px;\n' +
-      '  margin-right: 0.75rem;\n' +
-      '}\n\n' +
-      '.nav-item {\n' +
-      '  display: flex;\n' +
-      '  align-items: center;\n' +
-      '  padding: 0.75rem 1rem;\n' +
-      '  border-radius: var(--radius);\n' +
-      '  color: var(--gray-800);\n' +
-      '  margin-bottom: 0.5rem;\n' +
-      '  transition: all 0.2s;\n' +
-      '}\n\n' +
-      '.nav-item.active, .nav-item:hover {\n' +
-      '  background-color: var(--primary-light);\n' +
-      '  color: var(--primary);\n' +
-      '}\n\n' +
-      '.content {\n' +
-      '  padding: 2rem;\n' +
-      '}\n\n' +
-      '.page-title {\n' +
-      '  font-weight: 700;\n' +
-      '  font-size: 1.5rem;\n' +
-      '  margin-bottom: 1.5rem;\n' +
-      '}\n\n' +
-      '.stats-grid {\n' +
+      '  border-radius: 0.5rem;\n' +
+      '  overflow: hidden;\n' +
+      '  box-shadow: var(--shadow);\n' +
+      '  transition: transform 0.3s ease;\n' +
+      '}\n' +
+      '\n' +
+      '.card:hover {\n' +
+      '  transform: translateY(-5px);\n' +
+      '}\n' +
+      '\n' +
+      '.card-grid {\n' +
       '  display: grid;\n' +
-      '  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));\n' +
+      '  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));\n' +
       '  gap: 1.5rem;\n' +
-      '  margin-bottom: 2rem;\n' +
-      '}\n\n' +
-      '.stat-card {\n' +
-      '  background-color: white;\n' +
-      '  border-radius: var(--radius);\n' +
-      '  padding: 1.5rem;\n' +
-      '  box-shadow: var(--shadow-sm);\n' +
-      '}\n\n' +
-      '.stat-title {\n' +
-      '  color: #6c757d;\n' +
-      '  font-size: 0.875rem;\n' +
-      '  margin-bottom: 0.5rem;\n' +
-      '}\n\n' +
-      '.stat-value {\n' +
-      '  font-size: 1.5rem;\n' +
-      '  font-weight: 700;\n' +
-      '  margin-bottom: 0.25rem;\n' +
-      '}\n\n' +
-      '.stat-change {\n' +
-      '  font-size: 0.875rem;\n' +
-      '}\n\n' +
-      '.stat-change.positive {\n' +
-      '  color: var(--success);\n' +
-      '}\n\n' +
-      '.stat-change.negative {\n' +
-      '  color: var(--danger);\n' +
-      '}\n\n' +
-      '.chart-container {\n' +
-      '  background-color: white;\n' +
-      '  border-radius: var(--radius);\n' +
-      '  padding: 1.5rem;\n' +
-      '  box-shadow: var(--shadow-sm);\n' +
-      '  margin-bottom: 1.5rem;\n' +
-      '}\n\n' +
-      '.chart-header {\n' +
-      '  display: flex;\n' +
-      '  justify-content: space-between;\n',
+      '}\n' +
+      '\n' +
+      '.btn {\n' +
+      '  display: inline-flex;\n' +
+      '  align-items: center;\n' +
+      '  gap: 0.5rem;\n' +
+      '  padding: 0.5rem 1rem;\n' +
+      '  border-radius: 0.25rem;\n' +
+      '  background-color: var(--color-primary);\n' +
+      '  color: white;\n' +
+      '  text-decoration: none;\n' +
+      '}\n' +
+      '\n' +
+      '@media (prefers-color-scheme: dark) {\n' +
+      '  body {\n' +
+      '    background-color: var(--color-dark);\n' +
+      '    color: var(--color-light);\n' +
+      '  }\n' +
+      '  \n' +
+      '  .card {\n' +
+      '    background-color: #2a2d3a;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      '@media (max-width: 768px) {\n' +
+      '  .card-grid {\n' +
+      '    grid-template-columns: 1fr;\n' +
+      '  }\n' +
+      '}',
     cmExtension: css(),
   },
   json: {
@@ -502,84 +471,51 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     wasmPath: 'tree-sitter-json.wasm',
     sampleCode:
       '{\n' +
-      '  "apiVersion": "2.0",\n' +
-      '  "metadata": {\n' +
-      '    "generated": "2025-03-05T10:12:08Z",\n' +
-      '    "requestId": "f8d7e991-b5ac-4e9d-a3c8-1d4a06abe5f2"\n' +
+      '  "api": {\n' +
+      '    "name": "ProductCatalog",\n' +
+      '    "version": "2.5.0",\n' +
+      '    "baseUrl": "https://api.example.com/v2",\n' +
+      '    "auth": {\n' +
+      '      "type": "oauth2",\n' +
+      '      "scopes": ["read", "write"]\n' +
+      '    }\n' +
       '  },\n' +
-      '  "dashboard": {\n' +
-      '    "name": "Sales Performance Q1 2025",\n' +
-      '    "description": "Quarterly sales metrics and KPIs",\n' +
-      '    "owner": {\n' +
-      '      "id": "u-29481",\n' +
-      '      "name": "Sarah Chen",\n' +
-      '      "email": "sarah.chen@example.com",\n' +
-      '      "department": "Sales Operations"\n' +
-      '    },\n' +
-      '    "metrics": [\n' +
-      '      {\n' +
-      '        "id": "m-001",\n' +
-      '        "name": "Quarterly Revenue",\n' +
-      '        "value": 1458750.25,\n' +
-      '        "currency": "USD",\n' +
-      '        "trend": 12.3,\n' +
-      '        "status": "positive",\n' +
-      '        "target": 1400000,\n' +
-      '        "targetAchieved": true\n' +
-      '      },\n' +
-      '      {\n' +
-      '        "id": "m-002",\n' +
-      '        "name": "New Customers",\n' +
-      '        "value": 1827,\n' +
-      '        "trend": 5.6,\n' +
-      '        "status": "positive",\n' +
-      '        "target": 2000,\n' +
-      '        "targetAchieved": false\n' +
-      '      },\n' +
-      '      {\n' +
-      '        "id": "m-003",\n' +
-      '        "name": "Average Deal Size",\n' +
-      '        "value": 24650.75,\n' +
-      '        "currency": "USD",\n' +
-      '        "trend": 8.2,\n' +
-      '        "status": "positive",\n' +
-      '        "target": 22000,\n' +
-      '        "targetAchieved": true\n' +
-      '      },\n' +
-      '      {\n' +
-      '        "id": "m-004",\n' +
-      '        "name": "Sales Cycle Duration",\n' +
-      '        "value": 32.5,\n' +
-      '        "unit": "days",\n' +
-      '        "trend": -3.1,\n' +
-      '        "status": "positive",\n' +
-      '        "target": 35,\n' +
-      '        "targetAchieved": true\n' +
-      '      }\n' +
-      '    ],\n' +
-      '    "regionalBreakdown": {\n' +
-      '      "northAmerica": {\n' +
-      '        "revenue": 685612.50,\n' +
-      '        "deals": 287,\n' +
-      '        "conversionRate": 42.8\n' +
-      '      },\n' +
-      '      "europe": {\n' +
-      '        "revenue": 498725.75,\n' +
-      '        "deals": 215,\n' +
-      '        "conversionRate": 38.2\n' +
-      '      },\n' +
-      '      "asiaPacific": {\n' +
-      '        "revenue": 274412.00,\n' +
-      '        "deals": 124,\n' +
-      '        "conversionRate": 36.5\n' +
+      '  "products": [\n' +
+      '    {\n' +
+      '      "id": "p-1001",\n' +
+      '      "name": "Smart Speaker",\n' +
+      '      "price": 129.99,\n' +
+      '      "category": "Electronics",\n' +
+      '      "rating": 4.6,\n' +
+      '      "inStock": true,\n' +
+      '      "features": ["Voice Control", "Wi-Fi", "Bluetooth"],\n' +
+      '      "dimensions": {\n' +
+      '        "height": 180,\n' +
+      '        "width": 120,\n' +
+      '        "depth": 120,\n' +
+      '        "unit": "mm"\n' +
       '      }\n' +
       '    },\n' +
-      '    "topPerformers": [\n' +
-      '      {"name": "Michael Rodriguez", "revenue": 287500.00, "deals": 12},\n' +
-      '      {"name": "Aisha Johnson", "revenue": 242750.50, "deals": 10},\n' +
-      '      {"name": "Daniel Kim", "revenue": 198300.75, "deals": 8}\n' +
-      '    ],\n' +
-      '    "lastUpdated": "2025-03-04T16:30:22Z"\n' +
+      '    {\n' +
+      '      "id": "p-1002",\n' +
+      '      "name": "Wireless Headphones",\n' +
+      '      "price": 89.99,\n' +
+      '      "category": "Electronics",\n' +
+      '      "rating": 4.8,\n' +
+      '      "inStock": true,\n' +
+      '      "features": ["Noise Cancelling", "Bluetooth 5.0", "40h Battery"],\n' +
+      '      "dimensions": {\n' +
+      '        "height": 220,\n' +
+      '        "width": 165,\n' +
+      '        "depth": 80,\n' +
+      '        "unit": "mm"\n' +
+      '      }\n' +
+      '    }\n' +
+      '  ],\n' +
+      '  "metadata": {\n' +
+      '    "generated": "2025-03-05T10:15:30Z",\n' +
+      '    "totalProducts": 2,\n' +
+      '    "currency": "USD"\n' +
       '  }\n' +
       '}',
     cmExtension: json(),
@@ -589,111 +525,88 @@ export const languageConfig: Record<SupportedLanguage, LanguageConfig> = {
     displayName: 'Go',
     wasmPath: 'tree-sitter-go.wasm',
     sampleCode:
-      'package main\n\n' +
+      'package main\n' +
+      '\n' +
       'import (\n' +
       '  "encoding/json"\n' +
       '  "fmt"\n' +
       '  "log"\n' +
-      '  "net/http"\n' +
-      '  "sort"\n' +
       '  "sync"\n' +
       '  "time"\n' +
-      ')\n\n' +
-      '// Book represents a book entity in our bookstore\n' +
-      'type Book struct {\n' +
+      ')\n' +
+      '\n' +
+      'type Event struct {\n' +
       '  ID        string    `json:"id"`\n' +
-      '  Title     string    `json:"title"`\n' +
-      '  Author    string    `json:"author"`\n' +
-      '  Price     float64   `json:"price"`\n' +
-      '  Rating    float64   `json:"rating"`\n' +
-      '  Genre     string    `json:"genre"`\n' +
-      '  Available bool      `json:"available"`\n' +
-      '  AddedAt   time.Time `json:"addedAt"`\n' +
-      '}\n\n' +
-      '// BookStore manages a collection of books\n' +
-      'type BookStore struct {\n' +
-      '  books  map[string]Book\n' +
-      '  mutex  sync.RWMutex\n' +
-      '  lastID int\n' +
-      '}\n\n' +
-      '// NewBookStore creates a new bookstore with sample data\n' +
-      'func NewBookStore() *BookStore {\n' +
-      '  store := &BookStore{\n' +
-      '    books:  make(map[string]Book),\n' +
-      '    lastID: 0,\n' +
-      '  }\n\n' +
-      '  // Add sample books\n' +
-      '  store.AddBook(Book{\n' +
-      '    Title:     "The Go Programming Language",\n' +
-      '    Author:    "Alan A. A. Donovan & Brian W. Kernighan",\n' +
-      '    Price:     34.99,\n' +
-      '    Rating:    4.7,\n' +
-      '    Genre:     "Programming",\n' +
-      '    Available: true,\n' +
-      '  })\n' +
+      '  Name      string    `json:"name"`\n' +
+      '  Timestamp time.Time `json:"timestamp"`\n' +
+      '  Tags      []string  `json:"tags,omitempty"`\n' +
+      '}\n' +
+      '\n' +
+      'type EventProcessor struct {\n' +
+      '  events []Event\n' +
+      '  mu     sync.RWMutex\n' +
+      '}\n' +
+      '\n' +
+      'func NewEventProcessor() *EventProcessor {\n' +
+      '  return &EventProcessor{events: make([]Event, 0)}\n' +
+      '}\n' +
+      '\n' +
+      'func (ep *EventProcessor) AddEvent(event Event) {\n' +
+      '  ep.mu.Lock()\n' +
+      '  defer ep.mu.Unlock()\n' +
+      '  ep.events = append(ep.events, event)\n' +
+      '}\n' +
+      '\n' +
+      'func (ep *EventProcessor) FilterByTag(tag string) []Event {\n' +
+      '  ep.mu.RLock()\n' +
+      '  defer ep.mu.RUnlock()\n' +
+      '  var filtered []Event\n' +
       '  \n' +
-      '  store.AddBook(Book{\n' +
-      '    Title:     "Designing Data-Intensive Applications",\n' +
-      '    Author:    "Martin Kleppmann",\n' +
-      '    Price:     39.99,\n' +
-      '    Rating:    4.8,\n' +
-      '    Genre:     "Computer Science",\n' +
-      '    Available: true,\n' +
-      '  })\n' +
-      '  \n' +
-      '  store.AddBook(Book{\n' +
-      '    Title:     "Clean Code",\n' +
-      '    Author:    "Robert C. Martin",\n' +
-      '    Price:     29.99,\n' +
-      '    Rating:    4.6,\n' +
-      '    Genre:     "Software Engineering",\n' +
-      '    Available: false,\n' +
-      '  })\n' +
-      '  \n' +
-      '  return store\n' +
-      '}\n\n' +
-      '// AddBook adds a new book to the store\n' +
-      'func (bs *BookStore) AddBook(book Book) string {\n' +
-      '  bs.mutex.Lock()\n' +
-      '  defer bs.mutex.Unlock()\n\n' +
-      '  bs.lastID++\n' +
-      '  id := fmt.Sprintf("book-%d", bs.lastID)\n' +
-      '  book.ID = id\n' +
-      '  book.AddedAt = time.Now()\n' +
-      '  bs.books[id] = book\n' +
-      '  return id\n' +
-      '}\n\n' +
-      '// GetBooksByRating returns books sorted by rating (highest first)\n' +
-      'func (bs *BookStore) GetBooksByRating() []Book {\n' +
-      '  bs.mutex.RLock()\n' +
-      '  defer bs.mutex.RUnlock()\n\n' +
-      '  books := make([]Book, 0, len(bs.books))\n' +
-      '  for _, book := range bs.books {\n' +
-      '    books = append(books, book)\n' +
-      '  }\n\n' +
-      '  sort.Slice(books, func(i, j int) bool {\n' +
-      '    return books[i].Rating > books[j].Rating\n' +
-      '  })\n\n' +
-      '  return books\n' +
-      '}\n\n' +
-      'func main() {\n' +
-      '  store := NewBookStore()\n' +
-      '  books := store.GetBooksByRating()\n\n' +
-      '  fmt.Println("📚 Bookstore Inventory (Sorted by Rating):")\n' +
-      '  fmt.Println("============================================")\n\n' +
-      '  for _, book := range books {\n' +
-      '    availability := "In Stock"\n' +
-      '    if !book.Available {\n' +
-      '      availability = "Out of Stock"\n' +
+      '  for _, event := range ep.events {\n' +
+      '    for _, t := range event.Tags {\n' +
+      '      if t == tag {\n' +
+      '        filtered = append(filtered, event)\n' +
+      '        break\n' +
+      '      }\n' +
       '    }\n' +
-      '    fmt.Printf("Title: %s\\n", book.Title)\n' +
-      '    fmt.Printf("Author: %s\\n", book.Author)\n' +
-      '    fmt.Printf("Genre: %s\\n", book.Genre)\n' +
-      '    fmt.Printf("Rating: %.1f/5.0\\n", book.Rating)\n' +
-      '    fmt.Printf("Price: $%.2f\\n", book.Price)\n' +
-      '    fmt.Printf("Status: %s\\n", availability)\n' +
-      '    fmt.Println("-------------------------------------------")\n' +
       '  }\n' +
+      '  \n' +
+      '  return filtered\n' +
+      '}\n' +
+      '\n' +
+      'func main() {\n' +
+      '  processor := NewEventProcessor()\n' +
+      '  \n' +
+      '  wg := sync.WaitGroup{}\n' +
+      '  eventCh := make(chan Event, 3)\n' +
+      '  \n' +
+      '  go func() {\n' +
+      '    events := []Event{\n' +
+      '      {ID: "evt-001", Name: "Login", Timestamp: time.Now(), Tags: []string{"auth", "user"}},\n' +
+      '      {ID: "evt-002", Name: "Purchase", Timestamp: time.Now(), Tags: []string{"transaction", "payment"}},\n' +
+      '      {ID: "evt-003", Name: "Logout", Timestamp: time.Now(), Tags: []string{"auth", "user"}},\n' +
+      '    }\n' +
+      '    \n' +
+      '    for _, evt := range events {\n' +
+      '      eventCh <- evt\n' +
+      '    }\n' +
+      '    close(eventCh)\n' +
+      '  }()\n' +
+      '  \n' +
+      '  wg.Add(1)\n' +
+      '  go func() {\n' +
+      '    defer wg.Done()\n' +
+      '    for event := range eventCh {\n' +
+      '      processor.AddEvent(event)\n' +
+      '      fmt.Printf("Processed: %s\\n", event.ID)\n' +
+      '    }\n' +
+      '  }()\n' +
+      '  \n' +
+      '  wg.Wait()\n' +
+      '  \n' +
+      '  authEvents := processor.FilterByTag("auth")\n' +
+      '  authData, _ := json.MarshalIndent(authEvents, "", "  ")\n' +
+      '  fmt.Println(string(authData))\n' +
       '}',
     cmExtension: go(),
   },
