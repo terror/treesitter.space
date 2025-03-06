@@ -406,11 +406,6 @@ const App = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {editorSettings.keybindings === 'vim' && (
-                    <span className='ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs'>
-                      VIM
-                    </span>
-                  )}
                 </div>
 
                 <EditorSettingsDialog />
