@@ -12,9 +12,10 @@ export const addHighlightEffect = StateEffect.define<{
   from: number;
   to: number;
 }>();
+
 export const removeHighlightEffect = StateEffect.define<null>();
 
-export const highlightPlugin = ViewPlugin.fromClass(
+export const highlightExtension = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
 

@@ -42,7 +42,7 @@ import { EditorSettingsDialog } from './components/editor-settings-dialog';
 import { TreeNode } from './components/tree-node';
 import {
   addHighlightEffect,
-  highlightPlugin,
+  highlightExtension,
   removeHighlightEffect,
 } from './lib/cm-highlight-extension';
 import { languageConfig } from './lib/language-config';
@@ -238,7 +238,7 @@ const App = () => {
       createEditorTheme(),
       highlightActiveLine(),
       highlightActiveLineGutter(),
-      highlightPlugin,
+      highlightExtension,
       history(),
       indentOnInput(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
