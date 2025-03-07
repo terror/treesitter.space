@@ -4,9 +4,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 interface TreeNodeProps {
   expandNode: (node: SyntaxNode) => void;
   expandedNodes: Set<SyntaxNode>;
-  hoveredNode: SyntaxNode | null;
+  hoveredNode?: SyntaxNode;
   item: TreeNodeType;
-  setHoveredNode: (node: SyntaxNode | null) => void;
+  setHoveredNode: (node?: SyntaxNode) => void;
 }
 
 export const TreeNode: React.FC<TreeNodeProps> = ({
@@ -31,7 +31,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
       className='tree-node flex cursor-pointer items-center py-1 font-mono text-sm whitespace-nowrap transition-colors hover:bg-blue-50'
       style={style}
       onMouseEnter={() => setHoveredNode(item.node)}
-      onMouseLeave={() => setHoveredNode(null)}
+      onMouseLeave={() => setHoveredNode()}
       onClick={() => hasChildren && expandNode(item.node)}
     >
       <span className='mr-1 flex w-4 justify-center'>

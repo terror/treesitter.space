@@ -34,7 +34,7 @@ import {
   lineNumbers,
 } from '@codemirror/view';
 import { vim } from '@replit/codemirror-vim';
-import { TentTree } from 'lucide-react';
+import { Loader2, TentTree } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Parser, Language as TSLanguage } from 'web-tree-sitter';
 
@@ -49,31 +49,43 @@ import { languageConfig } from './lib/language-config';
 import { useEditorSettings } from './providers/editor-settings-provider';
 
 const App = () => {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [formattedTree, setFormattedTree] = useState<TreeNodeType[]>([]);
-  const [hoveredNode, setHoveredNode] = useState<SyntaxNode | null>(null);
-
   const [parser, setParser] = useState<Parser | undefined>(undefined);
+  const [formattedTree, setFormattedTree] = useState<TreeNodeType[]>([]);
 
-  const [languages, setLanguages] = useState<Map<Language, TSLanguage>>(
-    new Map()
+  const [hoveredNode, setHoveredNode] = useState<SyntaxNode | undefined>(
+    undefined
   );
 
-  const [nodeToPositionMap, setNodeToPositionMap] = useState<
-    Map<SyntaxNode, Position>
-  >(new Map());
+  const [loadedLanguages, setLoadedLanguages] = useState<
+    Partial<Record<Language, TSLanguage>>
+  >({});
 
   const [expandedNodes, setExpandedNodes] = useState<Set<SyntaxNode>>(
     new Set()
   );
 
+  const [nodePositionMap, setNodePositionMap] = useState<
+    Map<SyntaxNode, Position>
+  >(new Map());
+
   const editorRef = useRef<HTMLDivElement>(null);
-  const editorViewRef = useRef<EditorView | null>(null);
+  const editorViewRef = useRef<EditorView | undefined>(undefined);
 
   const { settings: editorSettings, updateSettings: updateEditorSettings } =
     useEditorSettings();
+
+  const currentLanguageConfig = useMemo(
+    () => languageConfig[editorSettings.language],
+    [editorSettings.language]
+  );
+
+  const languageExtension = useMemo(
+    () => currentLanguageConfig.extension,
+    [currentLanguageConfig]
+  );
 
   useEffect(() => {
     const initialize = async () => {
@@ -109,9 +121,9 @@ const App = () => {
     };
   }, []);
 
-  useEffect(() => {
+  const handleHighlightNode = useCallback(() => {
     if (hoveredNode && editorViewRef.current) {
-      const position = nodeToPositionMap.get(hoveredNode);
+      const position = nodePositionMap.get(hoveredNode);
 
       if (position) {
         const { start: from, end: to } = position;
@@ -129,18 +141,21 @@ const App = () => {
         effects: [removeHighlightEffect.of(null)],
       });
     }
-  }, [hoveredNode, nodeToPositionMap]);
+  }, [hoveredNode, nodePositionMap]);
+
+  useEffect(() => {
+    handleHighlightNode();
+  }, [handleHighlightNode]);
 
   const onEditorUpdate = useCallback(
     (update: ViewUpdate) => {
       if (
         update.docChanged &&
         parser &&
-        languages.has(editorSettings.language)
+        loadedLanguages[editorSettings.language]
       ) {
         const newCode = update.state.doc.toString();
-
-        const language = languages.get(editorSettings.language);
+        const language = loadedLanguages[editorSettings.language];
 
         if (!language) return;
 
@@ -153,18 +168,18 @@ const App = () => {
           );
 
           setFormattedTree(formattedTree);
-          setNodeToPositionMap(nodePositionMap);
+          setNodePositionMap(nodePositionMap);
           setExpandedNodes(allNodes);
         }
       }
     },
     [
-      editorSettings.language,
-      languages,
       parser,
-      setExpandedNodes,
+      loadedLanguages,
+      editorSettings.language,
       setFormattedTree,
-      setNodeToPositionMap,
+      setNodePositionMap,
+      setExpandedNodes,
     ]
   );
 
@@ -212,12 +227,10 @@ const App = () => {
           backgroundColor: 'rgba(59, 130, 246, 0.3)',
         },
       }),
-    [editorSettings]
+    [editorSettings.fontSize]
   );
 
-  useEffect(() => {
-    if (!editorRef.current) return;
-
+  const editorExtensions = useMemo(() => {
     const extensions: Extension[] = [
       EditorState.tabSize.of(editorSettings.tabSize),
       EditorView.updateListener.of(onEditorUpdate),
@@ -229,7 +242,7 @@ const App = () => {
       history(),
       indentOnInput(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
-      languageConfig[editorSettings.language].cmExtension,
+      languageExtension,
       syntaxHighlighting(defaultHighlightStyle),
     ];
 
@@ -245,9 +258,23 @@ const App = () => {
       extensions.push(EditorView.lineWrapping);
     }
 
+    return extensions;
+  }, [
+    editorSettings.tabSize,
+    editorSettings.keybindings,
+    editorSettings.lineNumbers,
+    editorSettings.lineWrapping,
+    onEditorUpdate,
+    createEditorTheme,
+    languageExtension,
+  ]);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+
     const state = EditorState.create({
-      doc: languageConfig[editorSettings.language].sampleCode,
-      extensions: extensions,
+      doc: currentLanguageConfig.sampleCode,
+      extensions: editorExtensions,
     });
 
     const view = new EditorView({
@@ -260,90 +287,97 @@ const App = () => {
     return () => {
       view.destroy();
     };
-  }, [parser, editorSettings.language, languages, editorSettings]);
+  }, [parser, currentLanguageConfig.sampleCode, editorExtensions]);
 
-  const loadLanguage = async (languageName: Language) => {
-    if (!parser || languages.has(languageName)) return;
+  const loadLanguage = useCallback(
+    async (languageName: Language) => {
+      if (!parser || loadedLanguages[languageName]) return;
 
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      const config = languageConfig[languageName];
+        const config = languageConfig[languageName];
 
-      const language = await TSLanguage.load(config.wasmPath);
+        const language = await TSLanguage.load(config.wasmPath);
 
-      setLanguages((prev) => {
-        const updated = new Map(prev);
-        updated.set(languageName, language);
-        return updated;
-      });
+        setLoadedLanguages((prev) => ({
+          ...prev,
+          [languageName]: language,
+        }));
 
-      if (languageName === editorSettings.language && editorViewRef.current) {
-        const code = editorViewRef.current.state.doc.toString();
+        if (languageName === editorSettings.language && editorViewRef.current) {
+          const code = editorViewRef.current.state.doc.toString();
 
-        const newTree = parse({ parser, language, code });
+          const newTree = parse({ parser, language, code });
 
-        if (newTree) {
-          const { formattedTree, nodePositionMap, allNodes } = processTree(
-            newTree,
-            editorViewRef.current.state.doc
-          );
+          if (newTree) {
+            const { formattedTree, nodePositionMap, allNodes } = processTree(
+              newTree,
+              editorViewRef.current.state.doc
+            );
 
-          setFormattedTree(formattedTree);
-          setNodeToPositionMap(nodePositionMap);
-          setExpandedNodes(allNodes);
+            setFormattedTree(formattedTree);
+            setNodePositionMap(nodePositionMap);
+            setExpandedNodes(allNodes);
+          }
         }
+      } catch (err) {
+        setError(
+          `Failed to load language ${languageName}: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(
-        `Failed to load language ${languageName}: ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [parser, loadedLanguages, editorSettings.language]
+  );
 
   useEffect(() => {
     loadLanguage(editorSettings.language);
-  }, [parser, editorSettings.language, languages]);
+  }, [loadLanguage, editorSettings.language]);
 
-  const handleLanguageChange = (newLanguage: Language) => {
-    if (editorViewRef.current) {
+  const handleLanguageChange = useCallback(
+    (newLanguage: Language) => {
+      if (!editorViewRef.current) return;
+
+      const newLanguageConfig = languageConfig[newLanguage];
+
       editorViewRef.current.dispatch({
         changes: {
           from: 0,
           to: editorViewRef.current.state.doc.length,
-          insert: languageConfig[newLanguage].sampleCode,
+          insert: newLanguageConfig.sampleCode,
         },
-        effects: new Compartment().reconfigure(
-          languageConfig[newLanguage].cmExtension
-        ),
+        effects: new Compartment().reconfigure(newLanguageConfig.extension),
       });
 
       updateEditorSettings({ language: newLanguage });
 
-      if (parser && languages.has(newLanguage)) {
-        const code = editorViewRef.current.state.doc.toString();
+      if (!parser || !loadedLanguages[newLanguage]) return;
 
-        const language = languages.get(newLanguage);
+      const code = editorViewRef.current.state.doc.toString();
 
-        if (!language) return;
+      const language = loadedLanguages[newLanguage];
 
-        const newTree = parse({ parser, language, code });
+      if (!language) return;
 
-        if (newTree) {
-          const { formattedTree, nodePositionMap, allNodes } = processTree(
-            newTree,
-            editorViewRef.current.state.doc
-          );
+      const newTree = parse({ parser, language, code });
 
-          setFormattedTree(formattedTree);
-          setNodeToPositionMap(nodePositionMap);
-          setExpandedNodes(allNodes);
-        }
+      if (newTree) {
+        const { formattedTree, nodePositionMap, allNodes } = processTree(
+          newTree,
+          editorViewRef.current.state.doc
+        );
+
+        setFormattedTree(formattedTree);
+        setNodePositionMap(nodePositionMap);
+        setExpandedNodes(allNodes);
       }
-    }
-  };
+    },
+    [parser, loadedLanguages, updateEditorSettings]
+  );
 
   const expandNode = useCallback((node: SyntaxNode) => {
     setExpandedNodes((prevExpandedNodes) => {
@@ -367,7 +401,7 @@ const App = () => {
   if (loading && !parser) {
     return (
       <div className='flex h-screen items-center justify-center'>
-        Loading parser...
+        <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
       </div>
     );
   }
@@ -425,7 +459,7 @@ const App = () => {
             <div className='h-full overflow-auto'>
               {loading ? (
                 <div className='flex h-full items-center justify-center'>
-                  <p>Loading language...</p>
+                  <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
                 </div>
               ) : visibleTree.length > 0 ? (
                 <div className='p-2'>

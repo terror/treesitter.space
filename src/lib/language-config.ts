@@ -9,7 +9,9 @@ import { php } from '@codemirror/lang-php';
 import { python } from '@codemirror/lang-python';
 import { rust } from '@codemirror/lang-rust';
 
-export const languageConfig = {
+import { Language, LanguageConfig } from './types';
+
+export const languageConfig: Record<Language, LanguageConfig> = {
   javascript: {
     name: 'javascript',
     displayName: 'JavaScript',
@@ -59,7 +61,7 @@ export const languageConfig = {
       '    return `Error: ${error.message}`;\n' +
       '  }\n' +
       '};',
-    cmExtension: javascript(),
+    extension: javascript(),
   },
   python: {
     name: 'python',
@@ -98,7 +100,7 @@ export const languageConfig = {
       'data = [Measurement(value, "celsius") for value in [22.5, 19.8, 25.1, 20.0]]\n' +
       'result = analyze_data(data)\n' +
       "print(f\"Analyzed {result['count']} measurements, average: {result['avg']:.1f}°C\")",
-    cmExtension: python(),
+    extension: python(),
   },
   rust: {
     name: 'rust',
@@ -151,7 +153,7 @@ export const languageConfig = {
       '  \n' +
       '  println!("Total inventory value: ${:.2}", total_inventory_value);\n' +
       '}',
-    cmExtension: rust(),
+    extension: rust(),
   },
   cpp: {
     name: 'cpp',
@@ -206,7 +208,7 @@ export const languageConfig = {
       '  \n' +
       '  return 0;\n' +
       '}',
-    cmExtension: cpp(),
+    extension: cpp(),
   },
   java: {
     name: 'java',
@@ -249,7 +251,7 @@ export const languageConfig = {
       '    System.out.printf("Total electronics value: $%.2f%n", totalElectronicsValue);\n' +
       '  }\n' +
       '}',
-    cmExtension: java(),
+    extension: java(),
   },
   php: {
     name: 'php',
@@ -298,7 +300,7 @@ export const languageConfig = {
       'echo "Admins: " . count($admins) . "\\n";\n' +
       'echo "Users: " . implode(", ", $names) . "\\n";\n' +
       '?>',
-    cmExtension: php(),
+    extension: php(),
   },
   html: {
     name: 'html',
@@ -383,7 +385,7 @@ export const languageConfig = {
       '  </div>\n' +
       '</body>\n' +
       '</html>',
-    cmExtension: html(),
+    extension: html(),
   },
   css: {
     name: 'css',
@@ -463,7 +465,7 @@ export const languageConfig = {
       '    grid-template-columns: 1fr;\n' +
       '  }\n' +
       '}',
-    cmExtension: css(),
+    extension: css(),
   },
   json: {
     name: 'json',
@@ -518,7 +520,7 @@ export const languageConfig = {
       '    "currency": "USD"\n' +
       '  }\n' +
       '}',
-    cmExtension: json(),
+    extension: json(),
   },
   go: {
     name: 'go',
@@ -608,6 +610,6 @@ export const languageConfig = {
       '  authData, _ := json.MarshalIndent(authEvents, "", "  ")\n' +
       '  fmt.Println(string(authData))\n' +
       '}',
-    cmExtension: go(),
+    extension: go(),
   },
 };

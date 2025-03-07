@@ -17,7 +17,7 @@ export interface LanguageConfig {
   displayName: string;
   wasmPath: string;
   sampleCode: string;
-  cmExtension: Extension;
+  extension: Extension;
 }
 
 export type Position = {
